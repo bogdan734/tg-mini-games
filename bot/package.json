@@ -1,0 +1,12 @@
+{
+  "name": "tg-mini-games-bot",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env index.mjs"
+  },
+  "dependencies": {
+    "grammy": "^1.36.0"
+  }
+}
