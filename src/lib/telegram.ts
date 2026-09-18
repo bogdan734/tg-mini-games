@@ -3,12 +3,23 @@ import WebApp from '@twa-dev/sdk'
 /** True when running inside the Telegram client (initData is non-empty). */
 export const isTelegram = Boolean(WebApp.initData)
 
+/** Compare "7.10" >= "6.9" style versions (the SDK's own helper is not exported). */
+export function versionAtLeast(min: string): boolean {
+  const cur = String(WebApp.version ?? '6.0').split('.').map(Number)
+  const req = min.split('.').map(Number)
+  for (let i = 0; i < Math.max(cur.length, req.length); i++) {
+    const a = cur[i] ?? 0, b = req[i] ?? 0
+    if (a !== b) return a > b
+  }
+  return true
+}
+
 export function initTelegram(): void {
   try {
     WebApp.ready()
     WebApp.expand()
-    if (WebApp.isVersionAtLeast('7.7')) WebApp.disableVerticalSwipes()
-    if (WebApp.isVersionAtLeast('6.1')) WebApp.setHeaderColor('secondary_bg_color')
+    if (versionAtLeast('7.7')) WebApp.disableVerticalSwipes()
+    if (versionAtLeast('6.1')) WebApp.setHeaderColor('secondary_bg_color')
   } catch {
     /* outside Telegram: nothing to do */
   }
@@ -16,7 +27,7 @@ export function initTelegram(): void {
 
 export function haptic(kind: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light'): void {
   try {
-    if (!WebApp.isVersionAtLeast('6.1')) return
+    if (!versionAtLeast('6.1')) return
     if (kind === 'success' || kind === 'error') WebApp.HapticFeedback.notificationOccurred(kind)
     else WebApp.HapticFeedback.impactOccurred(kind)
   } catch {
@@ -25,7 +36,7 @@ export function haptic(kind: 'light' | 'medium' | 'heavy' | 'success' | 'error' 
 }
 
 export function showBackButton(onClick: () => void): () => void {
-  if (!WebApp.isVersionAtLeast('6.1')) return () => {}
+  if (!versionAtLeast('6.1')) return () => {}
   WebApp.BackButton.onClick(onClick)
   WebApp.BackButton.show()
   return () => {

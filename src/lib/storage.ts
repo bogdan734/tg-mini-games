@@ -1,16 +1,11 @@
 import WebApp from '@twa-dev/sdk'
+import { versionAtLeast } from './telegram'
 
 /**
  * Best-score storage: Telegram CloudStorage (synced across devices) when available,
  * localStorage otherwise (browser dev / old clients).
  */
-const cloudAvailable = (): boolean => {
-  try {
-    return WebApp.isVersionAtLeast('6.9')
-  } catch {
-    return false
-  }
-}
+const cloudAvailable = (): boolean => versionAtLeast('6.9')
 
 const key = (gameId: string) => `best:${gameId}`
 
