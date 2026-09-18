@@ -42,14 +42,14 @@ button { font: inherit; }
 
 /* Hub (Tiny Swords look) */
 .hub {
-  background: url('./games/assets/ts/terrain/grass_tile.png') repeat;
+  background: url('/games/assets/ts/terrain/grass_tile.png') repeat;
   background-size: 64px 64px;
 }
 .hub .subtitle { color: #f3e9d2; }
 .ribbon {
   align-self: center;
   border-style: solid; border-color: transparent; border-width: 0 26px;
-  border-image: url('./games/assets/ts/ui/Ribbon_Blue_3Slides.png') 0 64 fill / 0 26px stretch;
+  border-image: url('/games/assets/ts/ui/Ribbon_Blue_3Slides.png') 0 64 fill / 0 26px stretch;
   padding: 0 6px; height: 52px; box-sizing: border-box;
   color: #fff; font-weight: 700; font-size: 20px; text-align: center;
   min-width: 200px; line-height: 44px;
@@ -58,17 +58,17 @@ button { font: inherit; }
 .ribbon span { display: block; }
 .parchment {
   border: 18px solid transparent;
-  border-image: url('./games/assets/ts/ui/Carved_9Slides.png') 64 fill / 18px stretch;
+  border-image: url('/games/assets/ts/ui/Carved_9Slides.png') 64 fill / 18px stretch;
   color: #3a2a12;
 }
 .ts-btn {
   display: inline-flex; align-items: center; justify-content: center;
   border-style: solid; border-color: transparent; border-width: 0 16px;
-  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 0 64 fill / 0 16px stretch;
+  border-image: url('/games/assets/ts/ui/Button_Blue_3Slides.png') 0 64 fill / 0 16px stretch;
   padding: 0 6px; min-width: 96px; height: 42px; box-sizing: border-box;
   color: #fff; font-weight: 700; font-size: 15px; text-shadow: 0 1px 0 rgba(0,0,0,.4);
 }
-.ts-btn.red { border-image-source: url('./games/assets/ts/ui/Button_Red_3Slides.png'); }
+.ts-btn.red { border-image-source: url('/games/assets/ts/ui/Button_Red_3Slides.png'); }
 .game-list { display: flex; flex-direction: column; gap: 14px; }
 .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
@@ -141,7 +141,7 @@ button { font: inherit; }
 .profile {
   display: flex; align-items: center; gap: 12px;
   background: #e8d7b0; border: 16px solid transparent;
-  border-image: url('./games/assets/ts/ui/Carved_9Slides.png') 64 fill / 16px stretch;
+  border-image: url('/games/assets/ts/ui/Carved_9Slides.png') 64 fill / 16px stretch;
   color: #3a2a12; padding: 0 2px;
 }
 .profile-body b { color: #3a2a12; }
@@ -149,7 +149,7 @@ button { font: inherit; }
 .profile .chip {
   background: none; padding: 0; width: 44px; height: 42px;
   border-style: solid; border-color: transparent; border-width: 0 12px;
-  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 0 64 fill / 0 12px stretch;
+  border-image: url('/games/assets/ts/ui/Button_Blue_3Slides.png') 0 64 fill / 0 12px stretch;
   color: #fff; font-size: 16px; line-height: 42px;
 }
 .profile-offline { color: #6b5636; font-size: 13px; }
