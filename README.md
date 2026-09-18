@@ -44,6 +44,33 @@ npm test           # vitest: движки игр
    Вызвать `onScore(score)` в конце раунда — хаб сам сохранит рекорд.
 2. Добавить запись в `src/games/registry.ts` (`ready: true`).
 
+## Бэкенд (Cloudflare Workers + D1)
+
+`backend/` — Worker `https://tg-mini-games.ads-games.workers.dev`, база D1 `tg-mini-games`.
+Авторизация — подпись `initData` Telegram (заголовок `Authorization: tma <initData>`).
+
+| Endpoint | Что делает |
+|----------|------------|
+| `POST /api/me` | профиль, монеты, рефералы, ссылка-приглашение, тарифы доната |
+| `POST /api/score` `{game, level, score, wave}` | сохраняет рекорд, начисляет монеты (1 за 50 очков улучшения), отдаёт место |
+| `GET /api/leaderboard?game&level&scope=global\|friends` | топ-50 + моё место; друзья = кого пригласил / кто пригласил |
+| `POST /api/donate` `{stars}` | ссылка на инвойс Telegram Stars |
+| `POST /webhook` | обновления бота: `/start`, pre-checkout, successful_payment (+10 монет за ⭐) |
+
+```bash
+cd backend
+npm test                 # vitest: подпись initData, экономика
+npx wrangler dev         # локально на :8787 (нужен backend/.dev.vars с BOT_TOKEN, WEBHOOK_SECRET)
+npx wrangler deploy      # деплой (нужен `npx wrangler login`)
+npm run db:migrate       # миграции D1 на проде
+```
+
+Секреты Worker: `BOT_TOKEN`, `WEBHOOK_SECRET` (`npx wrangler secret put ...`). Бот работает через
+webhook на Worker — `bot/index.mjs` (polling) больше не нужен; если запускать его локально,
+сначала снять webhook (`deleteWebhook`).
+
+Фронт берёт адрес API из `.env.production` (`VITE_API_URL`); вне Telegram API отключён.
+
 ## Первый запуск (один раз)
 
 ### 1. GitHub
@@ -65,16 +92,14 @@ Workflow сам включит Pages. Если нет — Settings → Pages →
    (То же делает `bot/index.mjs` при старте — можно пропустить.)
 4. Опционально `/newapp` — «Direct Link» вида `t.me/<bot>/<app>`.
 
-### 3. Запуск бота (опционально)
+### 3. Бот
+
+Логика бота живёт в Worker (`backend/src/index.ts`, `/webhook`). Установить webhook один раз:
 
 ```bash
-cd bot
-cp .env.example .env   # вписать BOT_TOKEN и WEBAPP_URL
-npm start
+curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" -H 'content-type: application/json' \
+  -d '{"url":"https://tg-mini-games.ads-games.workers.dev/webhook","secret_token":"<WEBHOOK_SECRET>","allowed_updates":["message","pre_checkout_query"]}'
 ```
-
-Бот нужен только для `/start` с кнопкой. Mini App через Menu Button работает и без
-запущенного бота.
 
 ## Тест внутри Telegram с dev-сервера
 

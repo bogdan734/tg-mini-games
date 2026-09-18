@@ -64,21 +64,23 @@ async function authed(env: Env, req: Request): Promise<{ user: UserRow; tg: TgUs
 const publicUser = (u: UserRow) => ({ id: u.id, name: u.name, username: u.username, photo: u.photo, coins: u.coins, starsTotal: u.stars_total })
 
 async function leaderboard(env: Env, userId: number, game: string, level: number, scope: 'global' | 'friends') {
+  // friends = me + people I invited + the person who invited me
   const friendsFilter = scope === 'friends'
-    ? 'AND (s.user_id = ?3 OR u.referrer_id = ?3 OR u.id = (SELECT referrer_id FROM users WHERE id = ?3))'
+    ? 'AND (s.user_id = ? OR u.referrer_id = ? OR u.id = (SELECT referrer_id FROM users WHERE id = ?))'
     : ''
+  const friendsBind = scope === 'friends' ? [userId, userId, userId] : []
   const rows = await env.DB.prepare(
     `SELECT s.user_id AS id, u.name, u.username, u.photo, s.score, s.wave
      FROM scores s JOIN users u ON u.id = s.user_id
-     WHERE s.game = ?1 AND s.level = ?2 ${friendsFilter}
+     WHERE s.game = ? AND s.level = ? ${friendsFilter}
      ORDER BY s.score DESC, s.updated_at ASC LIMIT 50`,
-  ).bind(game, level, userId).all<{ id: number; name: string; username: string | null; photo: string | null; score: number; wave: number }>()
+  ).bind(game, level, ...friendsBind).all<{ id: number; name: string; username: string | null; photo: string | null; score: number; wave: number }>()
   const mine = await env.DB.prepare('SELECT score FROM scores WHERE user_id = ? AND game = ? AND level = ?').bind(userId, game, level).first<{ score: number }>()
   let rank: number | null = null
   if (mine) {
     const above = await env.DB.prepare(
-      `SELECT COUNT(*) AS n FROM scores s JOIN users u ON u.id = s.user_id WHERE s.game = ?1 AND s.level = ?2 AND s.score > ?4 ${friendsFilter}`,
-    ).bind(game, level, userId, mine.score).first<{ n: number }>()
+      `SELECT COUNT(*) AS n FROM scores s JOIN users u ON u.id = s.user_id WHERE s.game = ? AND s.level = ? AND s.score > ? ${friendsFilter}`,
+    ).bind(game, level, mine.score, ...friendsBind).first<{ n: number }>()
     rank = (above?.n ?? 0) + 1
   }
   return { entries: rows.results.map((r, i) => ({ ...r, rank: i + 1, me: r.id === userId })), me: { score: mine?.score ?? 0, rank } }
