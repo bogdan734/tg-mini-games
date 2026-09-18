@@ -76,7 +76,7 @@ export function tick(s: GameState, dt: number): void {
   advanceSnake(s, dt)
   tickCombat(s, dt)
   for (const dead of removeDead(s)) {
-    const g = Math.round((dead.head ? 20 : 2) * s.goldMul)
+    const g = Math.round((dead.head ? 20 + 5 * s.wave : 2 + Math.floor(s.wave / 3)) * s.goldMul)
     s.gold += g
     s.killed++
     s.score += dead.head ? 25 : 1
@@ -85,7 +85,11 @@ export function tick(s: GameState, dt: number): void {
   if (s.snake.length === 0) endWave(s)
 }
 
+/** Board actions are only legal while the player sees the board. */
+export const canAct = (s: GameState): boolean => s.phase === 'ready' || s.phase === 'wave'
+
 export function buyAndPlace(s: GameState, shopIdx: number, slot: number): boolean {
+  if (!canAct(s)) return false
   const type = s.shop[shopIdx]
   if (!type || unitAt(s, slot)) return false
   const price = UNIT_DEFS[type].price
@@ -98,7 +102,7 @@ export function buyAndPlace(s: GameState, shopIdx: number, slot: number): boolea
 }
 
 export function reroll(s: GameState): boolean {
-  if (s.gold < s.rerollCost) return false
+  if (!canAct(s) || s.gold < s.rerollCost) return false
   s.gold -= s.rerollCost
   s.rerollCost += 5
   rollShop(s)
@@ -109,7 +113,7 @@ export type MoveResult = 'moved' | 'merged' | 'blocked'
 
 export function moveOrMerge(s: GameState, unitId: number, slot: number): MoveResult {
   const u = s.units.find((x) => x.id === unitId)
-  if (!u || u.slot === slot) return 'blocked'
+  if (!canAct(s) || !u || u.slot === slot) return 'blocked'
   const target = unitAt(s, slot)
   if (!target) { u.slot = slot; return 'moved' }
   if (!canMerge(u, target)) return 'blocked'
@@ -137,7 +141,7 @@ export function chooseEvolution(s: GameState, choice: 'safe' | 'risky'): boolean
 export function resolveEvent(s: GameState): void {
   const e = s.pendingEvent
   s.pendingEvent = null
-  s.phase = s.resume
+  s.phase = 'ready' // events only happen between waves
   switch (e) {
     case 'goldrush': s.goldMul = 2; break
     case 'rush': s.speedMul = 1.4; s.goldMul = 3; break
@@ -157,7 +161,7 @@ export function sellValue(u: Unit): number {
 
 export function sellUnit(s: GameState, unitId: number): boolean {
   const u = s.units.find((x) => x.id === unitId)
-  if (!u) return false
+  if (!canAct(s) || !u) return false
   s.gold += sellValue(u)
   s.units = s.units.filter((x) => x.id !== unitId)
   return true

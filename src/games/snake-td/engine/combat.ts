@@ -1,7 +1,7 @@
 import { PATH, SLOTS } from './layout'
 import { pointAt } from './path'
 import { rand } from './rng'
-import { segmentD } from './snake'
+import { segmentD, segmentPos } from './snake'
 import type { GameState, Unit, Vec } from './types'
 import { UNIT_DEFS, unitDamage, unitRange } from './units'
 
@@ -12,7 +12,7 @@ function applyHit(s: GameState, i: number, dmg: number, u: Unit, from: Vec): voi
   const seg = s.snake[i]
   if (!seg) return
   seg.hp -= dmg
-  const p = pointAt(PATH, segmentD(s, i))
+  const p = pointAt(PATH, segmentPos(s, i))
   const color = UNIT_DEFS[u.type].color
   s.fx.beams.push({ from, to: p, t: 0.15, color })
   s.fx.popups.push({ x: p.x, y: p.y - 12, text: String(Math.round(dmg)), t: 0.6, color })
@@ -33,8 +33,8 @@ export function tickCombat(s: GameState, dt: number): void {
     let best = -1
     let bestD = -Infinity
     for (let i = 0; i < s.snake.length; i++) {
-      const d = segmentD(s, i)
-      if (d < 0) continue
+      if (segmentD(s, i) < 0) continue
+      const d = segmentPos(s, i)
       const p = pointAt(PATH, d)
       if (Math.hypot(p.x - center.x, p.y - center.y) <= range && d > bestD) {
         bestD = d

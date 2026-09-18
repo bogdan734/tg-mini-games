@@ -1,7 +1,7 @@
 import { MAX_WAVE, sellValue, unitAt } from '../engine/game'
 import { BOARD_H, BOARD_W, GATE, PATH, PATH_WIDTH, SLOTS, SLOT_R, SPAWN } from '../engine/layout'
 import { pointAt } from '../engine/path'
-import { segmentD } from '../engine/snake'
+import { segmentD, segmentPos } from '../engine/snake'
 import type { GameState, Unit, UnitType, Vec } from '../engine/types'
 import { canMerge, UNIT_DEFS, unitDamage, unitRange, unitTier } from '../engine/units'
 import type { Sprites } from './sprites'
@@ -64,8 +64,9 @@ function fieldLayer(): HTMLCanvasElement {
   // road
   g.lineCap = 'round'; g.lineJoin = 'round'
   const road = () => { g.beginPath(); g.moveTo(PATH.pts[0].x, PATH.pts[0].y); for (const p of PATH.pts) g.lineTo(p.x, p.y); g.stroke() }
-  g.strokeStyle = '#8a6b3e'; g.lineWidth = PATH_WIDTH + 8; road()
-  g.strokeStyle = '#d9b877'; g.lineWidth = PATH_WIDTH; road()
+  const link = () => { g.beginPath(); g.moveTo(GATE.x, GATE.y); g.lineTo(SPAWN.x, SPAWN.y); g.stroke() }
+  g.strokeStyle = '#8a6b3e'; g.lineWidth = PATH_WIDTH + 8; road(); link()
+  g.strokeStyle = '#d9b877'; g.lineWidth = PATH_WIDTH; road(); link()
   g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2; g.setLineDash([6, 10]); road(); g.setLineDash([])
   // spawn portal
   g.fillStyle = '#2b1e3f'; g.beginPath(); g.arc(SPAWN.x, SPAWN.y, 22, 0, Math.PI * 2); g.fill()
@@ -120,9 +121,8 @@ function drawLevelBadge(ctx: CanvasRenderingContext2D, u: Unit, x: number, y: nu
 function drawSnake(ctx: CanvasRenderingContext2D, s: GameState, time: number) {
   for (let i = s.snake.length - 1; i >= 0; i--) {
     const seg = s.snake[i]
-    const d = segmentD(s, i)
-    if (d < -5) continue
-    const p = pointAt(PATH, d)
+    if (segmentD(s, i) < -5) continue
+    const p = pointAt(PATH, segmentPos(s, i))
     const r = seg.head ? 21 : 14
     const hpRatio = Math.max(0, seg.hp) / seg.maxHp
     // shadow

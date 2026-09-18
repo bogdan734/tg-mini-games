@@ -52,6 +52,14 @@ export default function SnakeDefense({ onScore }: GameProps) {
     return () => ro.disconnect()
   }, [])
 
+  const restart = useCallback(() => {
+    stateRef.current = createGame()
+    viewRef.current = { drag: null, selected: null, toast: null }
+    reportedRef.current = false
+    phaseRef.current = 'ready'
+    setPhase('ready')
+  }, [])
+
   // game loop
   useEffect(() => {
     const ctx = canvasRef.current!.getContext('2d')!
@@ -97,11 +105,11 @@ export default function SnakeDefense({ onScore }: GameProps) {
           syncPhase(s)
           drawGame(ctx, s, spritesRef.current, viewRef.current, performance.now() / 1000)
         },
-        api: { startWave, resolveEvent, chooseEvolution, buyAndPlace, moveOrMerge, reroll, unitAt, canMerge, sync: () => syncPhase(stateRef.current) },
+        api: { startWave, resolveEvent, chooseEvolution, buyAndPlace, moveOrMerge, reroll, unitAt, canMerge, sync: () => syncPhase(stateRef.current), reset: restart },
       }
     }
     return () => cancelAnimationFrame(raf)
-  }, [onScore])
+  }, [onScore, restart])
 
   const toCanvas = (e: React.PointerEvent) => {
     const r = canvasRef.current!.getBoundingClientRect()
@@ -166,14 +174,6 @@ export default function SnakeDefense({ onScore }: GameProps) {
       if (u && sellUnit(s, d.unitId)) { toast('Продано'); haptic('medium'); v.selected = null }
     }
   }, [])
-
-  const restart = () => {
-    stateRef.current = createGame()
-    viewRef.current = { drag: null, selected: null, toast: null }
-    reportedRef.current = false
-    phaseRef.current = 'ready'
-    setPhase('ready')
-  }
 
   const s = stateRef.current
   const evoUnit = s.units.find((u) => u.id === s.pendingEvo)

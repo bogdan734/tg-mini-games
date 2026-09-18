@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createGame } from '../game'
 import { PATH } from '../layout'
-import { advanceSnake, makeSnake, removeDead, SPACING, waveSpeed } from '../snake'
+import { advanceSnake, makeSnake, removeDead, segmentPos, SPACING, waveSpeed } from '../snake'
 
 describe('makeSnake', () => {
   it('builds head-first with tankier tail', () => {
@@ -22,15 +22,24 @@ describe('advanceSnake', () => {
     expect(g.headD).toBeCloseTo(waveSpeed(1))
   })
 
-  it('removes segments at the gate and costs lives (head = 3)', () => {
+  it('keeps looping: the leader passing the gate costs lives (head = 3)', () => {
     const g = createGame()
     g.snake = makeSnake(1, 1)
     g.headD = PATH.length - 1
-    const escaped = advanceSnake(g, 0.05)
-    expect(escaped).toBe(1)
+    const passes = advanceSnake(g, 0.05)
+    expect(passes).toBe(1)
     expect(g.lives).toBe(7)
-    expect(g.snake[0].head).toBe(false)
-    expect(g.headD).toBeCloseTo(PATH.length - 1 + waveSpeed(1) * 0.05 - SPACING)
+    expect(g.snake).toHaveLength(14)
+    expect(g.snake[0].head).toBe(true)
+    expect(segmentPos(g, 0)).toBeCloseTo(waveSpeed(1) * 0.05 - 1)
+  })
+
+  it('a headless leader costs one life per pass', () => {
+    const g = createGame()
+    g.snake = makeSnake(1, 1).slice(1)
+    g.headD = PATH.length - 1
+    advanceSnake(g, 0.05)
+    expect(g.lives).toBe(9)
   })
 })
 

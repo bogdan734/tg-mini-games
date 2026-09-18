@@ -16,6 +16,7 @@ src/
   games/types.ts      GameMeta, GameProps
   games/registry.ts   СПИСОК ИГР — добавлять новые сюда
   games/<id>/         код игры (default export, принимает { onScore })
+  games/snake-td/     Snake Defense: engine/ (чистая логика + тесты), render/ (canvas)
   screens/Hub.tsx     список игр
   screens/GameScreen.tsx  обёртка: заголовок, кнопка назад, запись рекорда
 bot/index.mjs         бот: /start → кнопка Web App, menu button
@@ -28,7 +29,14 @@ bot/index.mjs         бот: /start → кнопка Web App, menu button
 npm install
 npm run dev        # http://localhost:5173 — работает и вне Telegram (мок-режим)
 npm run build      # tsc + vite build → dist/
+npm test           # vitest: движки игр
 ```
+
+Спрайты Snake Defense пересобираются из CC0-частей Kenney (см. `ASSETS.md`):
+`python3 scripts/build-sprites.py <путь к monster-builder-pack/PNG/Default>`.
+
+В dev-сборке у Snake Defense есть хук `window.__std` (`state`, `step(sec)`, `api`) для
+автотестов и проверки баланса из консоли.
 
 ## Добавить игру
 

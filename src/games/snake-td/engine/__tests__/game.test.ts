@@ -145,6 +145,23 @@ describe('waves', () => {
   })
 })
 
+describe('phase guards', () => {
+  it('blocks board actions while an event or evolution overlay is up', () => {
+    const s = createGame()
+    const a = put(s, 'volt', 0)
+    put(s, 'volt', 1)
+    s.phase = 'event'
+    s.pendingEvent = 'goldrush'
+    expect(buyAndPlace(s, 0, 5)).toBe(false)
+    expect(moveOrMerge(s, a.id, 1)).toBe('blocked')
+    expect(reroll(s)).toBe(false)
+    expect(sellUnit(s, a.id)).toBe(false)
+    resolveEvent(s)
+    expect(s.phase).toBe('ready')
+    expect(s.goldMul).toBe(2)
+  })
+})
+
 describe('sellUnit', () => {
   it('refunds part of the price', () => {
     const s = createGame()
