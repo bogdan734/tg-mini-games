@@ -129,6 +129,46 @@ def compose(recipe):
     paste_centered(canvas, load(name), bx + body.width * rx, by + body.height * ry, sc * k * 1.2)
     return canvas
 
+# ---- Merge Defense towers: elemental monsters (one sprite per tower type)
+def towers():
+    E = {'fire': 'red', 'ice': 'blue', 'robot': 'dark', 'storm': 'white', 'nature': 'green'}
+    def base(color, eye, mouth, detail=None):
+        return dict(body=f'body_{color}A.png', eyes=[(eye, .36, .42, .7), (eye, .64, .42, .7)], mouth=(mouth, .5, .66, .9), details=detail or [])
+    def tier2(color, eye, mouth, horn_color, extra=None):
+        d = [(f'detail_{horn_color}_horn_small.png', .22, .04, 1, False), (f'detail_{horn_color}_horn_small.png', .78, .04, 1, True)] + (extra or [])
+        return dict(body=f'body_{color}D.png', eyes=[(eye, .36, .4, .7), (eye, .64, .4, .7)], mouth=(mouth, .5, .64, .9), details=d)
+    def tier3(color, eye, mouth, horn_color):
+        d = [(f'detail_{horn_color}_horn_large.png', .18, .0, 1.2, False), (f'detail_{horn_color}_horn_large.png', .82, .0, 1.2, True),
+             (f'detail_{horn_color}_antenna_large.png', .5, -.04, 1.1, False)]
+        return dict(body=f'body_{color}F.png', eyes=[(eye, .5, .36, 1.0)], mouth=(mouth, .5, .6, 1), details=d)
+    return {
+      'fire':      base('red', 'eye_angry_red.png', 'mouth_closed_fangs.png'),
+      'ice':       base('blue', 'eye_cute_light.png', 'mouth_closed_happy.png'),
+      'robot':     base('dark', 'eye_human_blue.png', 'mouth_closed_teeth.png', [('detail_dark_antenna_small.png', .5, .0, 1, False)]),
+      'storm':     base('white', 'eye_psycho_light.png', 'mouth_closed_sad.png'),
+      'nature':    base('green', 'eye_human_green.png', 'mouth_closed_happy.png', [('detail_green_ear.png', .12, .12, 1, False), ('detail_green_ear.png', .88, .12, 1, True)]),
+      'firebot':   tier2('dark', 'eye_angry_red.png', 'mouth_closed_fangs.png', 'red', [('detail_dark_antenna_small.png', .5, .0, 1, False)]),
+      'firestorm': tier2('red', 'eye_psycho_light.png', 'mouthC.png', 'white'),
+      'blizzard':  tier2('white', 'eye_cute_light.png', 'mouth_closed_happy.png', 'blue'),
+      'cryobot':   tier2('blue', 'eye_human_blue.png', 'mouth_closed_teeth.png', 'dark', [('detail_dark_antenna_small.png', .5, .0, 1, False)]),
+      'tesla':     tier2('dark', 'eye_psycho_light.png', 'mouthE.png', 'white', [('detail_white_antenna_large.png', .5, .0, 1, False)]),
+      'wildfire':  tier2('green', 'eye_angry_red.png', 'mouth_closed_fangs.png', 'red'),
+      'mechagod':  tier3('red', 'eye_red.png', 'mouthC.png', 'yellow'),
+      'glacius':   tier3('white', 'eye_cute_dark.png', 'mouthB.png', 'blue'),
+      'titan':     tier3('green', 'eye_psycho_dark.png', 'mouthJ.png', 'yellow'),
+    }
+
+tower_dir = os.path.join(os.path.dirname(__file__), '..', 'public', 'games', 'merge-td', 'towers')
+os.makedirs(tower_dir, exist_ok=True)
+tw = towers()
+sheet = Image.new('RGBA', (128 * 5, 128 * 3), (30, 30, 40, 255))
+for i, (name, recipe) in enumerate(tw.items()):
+    img = compose(recipe).resize((128, 128), Image.LANCZOS)
+    img.save(os.path.join(tower_dir, f'{name}.png'), optimize=True)
+    sheet.alpha_composite(img, (128 * (i % 5), 128 * (i // 5)))
+sheet.save(os.path.join(tower_dir, '_preview.png'))
+print('towers ->', os.path.abspath(tower_dir))
+
 for set_name, make in SETS.items():
     recipes = make()
     out_dir = os.path.join(OUT, set_name)

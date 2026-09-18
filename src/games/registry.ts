@@ -9,10 +9,10 @@ export const GAMES: GameMeta[] = [
   {
     id: 'merge-td',
     title: 'Merge Defense',
-    description: 'Ставь башни на сетку, сливай в комбо, держи волны',
+    description: 'Ставь стихии на плитки, сливай в новых существ, 12 волн',
     icon: '🏰',
-    ready: false,
-    component: lazy(() => import('./coming-soon/ComingSoon')),
+    ready: true,
+    component: lazy(() => import('./merge-td/MergeDefense')),
   },
   {
     id: 'snake-td',
