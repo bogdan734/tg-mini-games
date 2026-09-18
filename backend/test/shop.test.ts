@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canBuy, canEquip, coinsForRun, defaultFor, eventGrants, ITEMS } from '../src/shop'
+import { canBuy, canEquip, coinsForRun, defaultFor, ITEMS } from '../src/shop'
 
 describe('catalog', () => {
   it('has one default per equippable kind and no price on event items', () => {
@@ -32,16 +32,6 @@ describe('canEquip', () => {
     expect(canEquip('snake', 'snake:stone', owned)).toBe(true)
     expect(canEquip('units', 'snake:lava', owned)).toBe(false)
     expect(canEquip('map', 'map:2', new Set(['map:2']))).toBe(false)
-  })
-})
-
-describe('eventGrants', () => {
-  const before = Date.parse('2026-09-20T00:00:00Z'), after = Date.parse('2026-10-02T00:00:00Z')
-  it('rewards a win on map 3 during the launch event only', () => {
-    expect(eventGrants({ won: true, level: 3, now: before })).toEqual(['units:gold', 'snake:gold'])
-    expect(eventGrants({ won: false, level: 3, now: before })).toEqual([])
-    expect(eventGrants({ won: true, level: 2, now: before })).toEqual([])
-    expect(eventGrants({ won: true, level: 3, now: after })).toEqual([])
   })
 })
 

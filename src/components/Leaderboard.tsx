@@ -3,7 +3,7 @@ import { getLeaderboard, type Board } from '../lib/api'
 import { haptic } from '../lib/telegram'
 
 const LEVELS = [
-  { id: 1, name: 'Луг' }, { id: 2, name: 'Пустыня' }, { id: 3, name: 'Снега' }, { id: 4, name: '∞' },
+  { id: 0, name: 'Общий' }, { id: 1, name: 'Луг' }, { id: 2, name: 'Пустыня' }, { id: 3, name: 'Снега' }, { id: 4, name: '∞' },
 ]
 
 export default function Leaderboard({ onClose, game = 'snake-td', initialLevel = 1 }: { onClose: () => void; game?: string; initialLevel?: number }) {
@@ -15,7 +15,7 @@ export default function Leaderboard({ onClose, game = 'snake-td', initialLevel =
   useEffect(() => {
     let alive = true
     setLoading(true)
-    getLeaderboard(game, level, scope).then((b) => { if (alive) { setBoard(b); setLoading(false) } })
+    getLeaderboard(level === 0 ? 'all' : game, level, scope).then((b) => { if (alive) { setBoard(b); setLoading(false) } })
     return () => { alive = false }
   }, [game, level, scope])
 

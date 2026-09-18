@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apiEnabled, equippedNow, getMe, onProfile, ownedMapLevel, submitScore, type ScoreResult } from '../../lib/api'
+import { apiEnabled, createDuel, equippedNow, getDuel, getMe, onProfile, ownedMapLevel, submitDuel, submitScore, takePendingDuel, type DuelView, type ScoreResult } from '../../lib/api'
 import { getValue, setValue } from '../../lib/storage'
 import { haptic, shareText } from '../../lib/telegram'
 import type { GameProps } from '../types'
@@ -37,6 +37,9 @@ export default function SnakeDefense({ onScore }: GameProps) {
   const [unlocked, setUnlocked] = useState(1)
   const [best, setBest] = useState<Record<number, number>>({})
   const [online, setOnline] = useState<ScoreResult | null>(null)
+  const [duel, setDuel] = useState<DuelView | null>(null)
+  const [duelResult, setDuelResult] = useState<{ duel: DuelView; reward: number } | null>(null)
+  const duelRef = useRef<DuelView | null>(null)
   const [, bump] = useState(0)
 
   const toast = (text: string) => { viewRef.current.toast = { text, t: 1.4 } }
@@ -55,6 +58,15 @@ export default function SnakeDefense({ onScore }: GameProps) {
     applyProfile()
     const off = onProfile(applyProfile)
     void getMe()
+    const pending = takePendingDuel()
+    if (pending) {
+      void getDuel(pending).then((d) => {
+        if (!d || !alive) { toast('Дуэль не найдена'); return }
+        const mine = d.me === 'creator' ? d.creator : d.opponent
+        if (d.status !== 'open' || mine?.score !== null) { toast('Эта дуэль уже сыграна'); return }
+        startLevel(d.level, d.seed, d)
+      })
+    }
     let alive = true
     Promise.all([getValue(K_UNLOCKED), ...LEVELS.map((l) => getValue(K_BEST(l.id)))]).then(([u, ...b]) => {
       if (!alive) return
@@ -83,8 +95,11 @@ export default function SnakeDefense({ onScore }: GameProps) {
     return () => ro.disconnect()
   }, [])
 
-  const startLevel = useCallback((level: number) => {
-    stateRef.current = createGame(level)
+  const startLevel = useCallback((level: number, seed: number | null = null, d: DuelView | null = null) => {
+    duelRef.current = d
+    setDuel(d)
+    setDuelResult(null)
+    stateRef.current = createGame(level, seed)
     viewRef.current = { ...viewRef.current, drag: null, selected: null, toast: null }
     reportedRef.current = false
     phaseRef.current = 'ready'
@@ -104,7 +119,11 @@ export default function SnakeDefense({ onScore }: GameProps) {
     haptic(s.phase === 'won' ? 'success' : 'error')
     onScore(s.score)
     setOnline(null)
-    if (apiEnabled()) void submitScore('snake-td', s.level, s.score, s.wave, s.phase === 'won').then(setOnline)
+    if (apiEnabled()) {
+      void submitScore('snake-td', s.level, s.score, s.wave, s.phase === 'won', { killed: s.killed, merges: s.merges, evolutions: s.evolutions }).then(setOnline)
+      const d = duelRef.current
+      if (d) void submitDuel(d.id, s.score, s.wave).then((r) => { if (r) { setDuelResult(r); setDuel(r.duel) } })
+    }
     const prev = best[s.level] ?? 0
     if (s.score > prev) {
       setBest((b) => ({ ...b, [s.level]: s.score }))
@@ -250,6 +269,24 @@ export default function SnakeDefense({ onScore }: GameProps) {
   const evoUnit = s.units.find((u) => u.id === s.pendingEvo)
   const ev = s.pendingEvent ? EVENTS[s.pendingEvent] : null
   const nextLevel = LEVELS.find((l) => l.id === s.level + 1)
+  const newDuel = async (level: number) => {
+    haptic('light')
+    const r = await createDuel(level)
+    if (!r) { toast('Дуэли доступны в Telegram'); return }
+    shareText(`⚔️ Вызываю на дуэль в Snake Defense, карта «${getLevel(level).name}». Один сид на двоих — кто наберёт больше?`, r.link)
+    startLevel(level, r.duel.seed, r.duel)
+  }
+  const duelSummary = (): string | null => {
+    const d = duelResult?.duel ?? duel
+    if (!d) return null
+    const mine = d.me === 'creator' ? d.creator : d.opponent
+    const theirs = d.me === 'creator' ? d.opponent : d.creator
+    if (d.status === 'done') {
+      const res = d.winner === 'draw' ? 'Ничья' : d.winner === d.me ? '🏆 Ты победил' : '😿 Ты проиграл'
+      return `${res}: ${mine?.score ?? 0} — ${theirs?.score ?? 0}${duelResult?.reward ? ` · +${duelResult.reward} 🪙` : ''}`
+    }
+    return theirs?.name ? `Ждём результат: ${theirs.name}` : 'Отправь ссылку сопернику — результат придёт в «Задания → Дуэли»'
+  }
   const share = () => {
     const what = s.phase === 'won' ? `прошёл «${lvl.name}» полностью` : `дошёл до волны ${s.wave} на «${lvl.name}»`
     shareText(`🐍 Snake Defense: я ${what} и набрал ${s.score} очков. Побьёшь?`)
@@ -265,6 +302,9 @@ export default function SnakeDefense({ onScore }: GameProps) {
         onPointerUp={onUp}
         onPointerCancel={onUp}
       />
+      {phase === 'ready' && duel && s.units.length === 0 && (
+        <p className="std-duel-banner">⚔️ Дуэль на «{lvl.name}» — сид общий с соперником</p>
+      )}
       {phase === 'menu' && (
         <div className="std-modal std-menu">
           <h2>🐍 Snake Defense</h2>
@@ -273,14 +313,17 @@ export default function SnakeDefense({ onScore }: GameProps) {
             {LEVELS.map((l) => {
               const locked = l.id > unlocked
               return (
-                <button key={l.id} className="std-level" disabled={locked} onClick={() => { sfxRef.current.unlock(); sfxRef.current.play('click'); startLevel(l.id) }}>
-                  <span className="std-level-icon">{locked ? '🔒' : l.icon}</span>
-                  <span className="std-level-body">
-                    <b>{l.name}</b>
-                    <small>{locked ? `Пройди «${LEVELS[l.id - 2]?.name}»` : l.desc}</small>
-                    {!locked && (best[l.id] ?? 0) > 0 && <em>Рекорд: {best[l.id]}</em>}
-                  </span>
-                </button>
+                <div key={l.id} className="std-level-wrap">
+                  <button className="std-level" disabled={locked} onClick={() => { sfxRef.current.unlock(); sfxRef.current.play('click'); startLevel(l.id) }}>
+                    <span className="std-level-icon">{locked ? '🔒' : l.icon}</span>
+                    <span className="std-level-body">
+                      <b>{l.name}</b>
+                      <small>{locked ? `Пройди «${LEVELS[l.id - 2]?.name}» или открой в магазине` : l.desc}</small>
+                      {!locked && (best[l.id] ?? 0) > 0 && <em>Рекорд: {best[l.id]}</em>}
+                    </span>
+                  </button>
+                  {!locked && apiEnabled() && <button className="std-duel" title="Дуэль" onClick={() => newDuel(l.id)}>⚔️</button>}
+                </div>
               )
             })}
           </div>
@@ -326,9 +369,11 @@ export default function SnakeDefense({ onScore }: GameProps) {
             {(best[s.level] ?? 0) < s.score && <><br />🎉 Новый рекорд карты</>}
             {online?.rank && <><br />🏆 Место в рейтинге: #{online.rank}{online.coinsEarned > 0 && ` · +${online.coinsEarned} 🪙`}</>}
             {online && online.granted.length > 0 && <><br />🎁 Ивентовая награда получена — смотри в магазине</>}
+            {online && online.questsCompleted.length > 0 && <><br />📋 Задание выполнено — забери награду в профиле</>}
+            {duelSummary() && <><br />⚔️ {duelSummary()}</>}
           </p>
-          {phase === 'won' && nextLevel && <button className="btn-primary" onClick={() => startLevel(nextLevel.id)}>{nextLevel.icon} Дальше: {nextLevel.name}</button>}
-          <button className="btn-primary" onClick={() => startLevel(s.level)}>Ещё раз</button>
+          {phase === 'won' && nextLevel && !duel && <button className="btn-primary" onClick={() => startLevel(nextLevel.id)}>{nextLevel.icon} Дальше: {nextLevel.name}</button>}
+          <button className="btn-primary" onClick={() => startLevel(s.level)}>{duel ? 'Обычная игра' : 'Ещё раз'}</button>
           <div className="std-row">
             <button className="back-btn" onClick={share}>📤 Вызвать друга</button>
             <button className="back-btn" onClick={toMenu}>К картам</button>

@@ -216,3 +216,25 @@ describe('bosses', () => {
     expect(s.wave).toBeGreaterThan(10)
   })
 })
+
+describe('seeded games', () => {
+  it('two games with the same seed roll the same shop; different seeds usually differ', () => {
+    // the rng is global (one game at a time), so play each seeded game to completion before the next
+    const play = () => { const g = createGame(1, 12345); const shops = [g.shop.join(',')]; for (let i = 0; i < 3; i++) { reroll(g); shops.push(g.shop.join(',')) } return { g, shops } }
+    const a = play(), b = play()
+    expect(a.shops).toEqual(b.shops)
+    expect(a.g.seed).toBe(12345)
+    const seeds = new Set(Array.from({ length: 8 }, (_, i) => createGame(1, 1000 + i).shop.join(',')))
+    expect(seeds.size).toBeGreaterThan(1)
+  })
+
+  it('counts merges and evolutions for quests', () => {
+    setRng(() => 0.3)
+    const s = createGame()
+    const a = put(s, 'volt', 0, 2), b = put(s, 'volt', 1, 2)
+    moveOrMerge(s, a.id, b.slot)
+    chooseEvolution(s, 'safe')
+    expect(s.merges).toBe(1)
+    expect(s.evolutions).toBe(1)
+  })
+})

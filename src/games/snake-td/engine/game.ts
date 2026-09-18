@@ -2,7 +2,7 @@ import { bossForWave, bossHpMul, newBoss, tickBoss } from './boss'
 import { tickCombat, tickFx } from './combat'
 import { getLevel } from './levels'
 import { pointAt } from './path'
-import { pick, rand } from './rng'
+import { pick, rand, seeded, setRng } from './rng'
 import { advanceSnake, makeSnake, removeDead } from './snake'
 import type { EventId, GameState, Unit, UnitType } from './types'
 import { canMerge, EVO_LEVEL, UNIT_DEFS, UNIT_TYPES } from './units'
@@ -30,9 +30,10 @@ function rollShop(s: GameState): void {
   })
 }
 
-export function createGame(level = 1): GameState {
+export function createGame(level = 1, seed: number | null = null): GameState {
+  setRng(seed === null ? Math.random : seeded(seed))
   const s: GameState = {
-    phase: 'ready', level, wave: 1, boss: newBoss('none'), lives: START_LIVES, gold: START_GOLD, score: 0, killed: 0,
+    phase: 'ready', level, wave: 1, boss: newBoss('none'), lives: START_LIVES, gold: START_GOLD, score: 0, killed: 0, merges: 0, evolutions: 0, seed,
     units: [], snake: [], headD: 0, shop: [], rerollCost: 10,
     pendingEvo: null, pendingEvent: null, resume: 'ready',
     goldMul: 1, speedMul: 1, fx: { popups: [], beams: [], shots: [], parts: [], sounds: [], shake: 0 }, time: 0, nextId: 1,
@@ -147,6 +148,7 @@ export function moveOrMerge(s: GameState, unitId: number, slot: number): MoveRes
   if (!canMerge(u, target)) return 'blocked'
   s.units = s.units.filter((x) => x.id !== u.id)
   target.level++
+  s.merges++
   s.fx.sounds.push('merge')
   const c = getLevel(s.level).slots[slot]
   burst(s, c.x, c.y, UNIT_DEFS[target.type].color, 12)
@@ -163,6 +165,7 @@ export function chooseEvolution(s: GameState, choice: 'safe' | 'risky'): boolean
   s.pendingEvo = null
   s.phase = s.resume
   if (!u) return false
+  s.evolutions++
   if (choice === 'safe') { u.evo = 'safe'; s.fx.sounds.push('evo'); return true }
   if (rand() < 0.5) { u.evo = 'risky'; s.fx.sounds.push('evo'); return true }
   u.level = Math.max(1, u.level - 1)

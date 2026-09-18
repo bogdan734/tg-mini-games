@@ -85,3 +85,13 @@ export function openInvoice(link: string): Promise<string> {
     }
   })
 }
+
+/** start_param from a deep link (t.me/bot?startapp=...) or, in dev, ?startapp= in the URL. */
+export function startParam(): string | null {
+  try {
+    const q = new URLSearchParams(location.search).get('startapp')
+    return WebApp.initDataUnsafe?.start_param ?? q
+  } catch {
+    return null
+  }
+}

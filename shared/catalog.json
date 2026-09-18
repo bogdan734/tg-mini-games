@@ -1,18 +1,118 @@
 {
   "events": {
-    "launch": { "title": "Запуск", "desc": "Пройди «Снега» до 1 октября 2026", "until": "2026-10-01T00:00:00Z" }
+    "launch": {
+      "title": "Запуск",
+      "desc": "Пройди «Снега» до 1 октября",
+      "until": "2026-10-01T00:00:00Z",
+      "condition": {
+        "type": "win_map",
+        "level": 3
+      },
+      "target": 1,
+      "rewards": {
+        "items": [
+          "units:gold",
+          "snake:gold"
+        ],
+        "coins": 100
+      }
+    },
+    "hunt": {
+      "title": "Охота на змей",
+      "desc": "Убей 1000 сегментов до 5 октября",
+      "until": "2026-10-05T00:00:00Z",
+      "condition": {
+        "type": "kills"
+      },
+      "target": 1000,
+      "rewards": {
+        "items": [],
+        "coins": 150
+      }
+    }
   },
   "items": [
-    { "id": "units:classic", "kind": "units", "name": "Классика", "desc": "Стандартный набор бойцов", "price": 0, "default": true },
-    { "id": "units:cute", "kind": "units", "name": "Милашки", "desc": "Круглые глаза, уши, улыбки", "price": 300 },
-    { "id": "units:villains", "kind": "units", "name": "Злодеи", "desc": "Тёмные тела, цветные рога", "price": 500 },
-    { "id": "units:gold", "kind": "units", "name": "Золотые", "desc": "Ивентовый набор — не продаётся", "event": "launch" },
-    { "id": "snake:stone", "kind": "snake", "name": "Каменная", "desc": "Обычная змея", "price": 0, "default": true },
-    { "id": "snake:lava", "kind": "snake", "name": "Лавовая", "desc": "Раскалённые сегменты", "price": 400 },
-    { "id": "snake:ice", "kind": "snake", "name": "Ледяная", "desc": "Стеклянный лёд", "price": 400 },
-    { "id": "snake:gold", "kind": "snake", "name": "Золотая", "desc": "Ивентовая — не продаётся", "event": "launch" },
-    { "id": "map:2", "kind": "map", "name": "Пустыня", "desc": "Или просто пройди «Луг»", "price": 200, "level": 2 },
-    { "id": "map:3", "kind": "map", "name": "Снега", "desc": "Или просто пройди «Пустыню»", "price": 200, "level": 3 },
-    { "id": "map:4", "kind": "map", "name": "Бесконечность", "desc": "Или просто пройди «Снега»", "price": 200, "level": 4 }
+    {
+      "id": "units:classic",
+      "kind": "units",
+      "name": "Классика",
+      "desc": "Стандартный набор бойцов",
+      "price": 0,
+      "default": true
+    },
+    {
+      "id": "units:cute",
+      "kind": "units",
+      "name": "Милашки",
+      "desc": "Круглые глаза, уши, улыбки",
+      "price": 300
+    },
+    {
+      "id": "units:villains",
+      "kind": "units",
+      "name": "Злодеи",
+      "desc": "Тёмные тела, цветные рога",
+      "price": 500
+    },
+    {
+      "id": "units:gold",
+      "kind": "units",
+      "name": "Золотые",
+      "desc": "Ивентовый набор — не продаётся",
+      "event": "launch"
+    },
+    {
+      "id": "snake:stone",
+      "kind": "snake",
+      "name": "Каменная",
+      "desc": "Обычная змея",
+      "price": 0,
+      "default": true
+    },
+    {
+      "id": "snake:lava",
+      "kind": "snake",
+      "name": "Лавовая",
+      "desc": "Раскалённые сегменты",
+      "price": 400
+    },
+    {
+      "id": "snake:ice",
+      "kind": "snake",
+      "name": "Ледяная",
+      "desc": "Стеклянный лёд",
+      "price": 400
+    },
+    {
+      "id": "snake:gold",
+      "kind": "snake",
+      "name": "Золотая",
+      "desc": "Ивентовая — не продаётся",
+      "event": "launch"
+    },
+    {
+      "id": "map:2",
+      "kind": "map",
+      "name": "Пустыня",
+      "desc": "Или просто пройди «Луг»",
+      "price": 200,
+      "level": 2
+    },
+    {
+      "id": "map:3",
+      "kind": "map",
+      "name": "Снега",
+      "desc": "Или просто пройди «Пустыню»",
+      "price": 200,
+      "level": 3
+    },
+    {
+      "id": "map:4",
+      "kind": "map",
+      "name": "Бесконечность",
+      "desc": "Или просто пройди «Снега»",
+      "price": 200,
+      "level": 4
+    }
   ]
 }

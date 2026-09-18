@@ -63,3 +63,10 @@
 .std-level-body small { color: var(--hint); font-size: 12px; }
 .std-level-body em { font-style: normal; color: var(--link); font-size: 12px; }
 .std-row { display: flex; gap: 10px; }
+.std-level-wrap { display: flex; align-items: center; gap: 8px; width: 100%; }
+.std-level-wrap .std-level { flex: 1; }
+.std-duel-banner {
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
+  margin: 0; padding: 6px 12px; border-radius: 999px; font-size: 13px;
+  background: rgba(255, 77, 109, 0.9); color: #fff; pointer-events: none; white-space: nowrap;
+}

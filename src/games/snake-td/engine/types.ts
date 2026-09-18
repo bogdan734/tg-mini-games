@@ -62,6 +62,10 @@ export interface GameState {
   gold: number
   score: number
   killed: number
+  merges: number
+  evolutions: number
+  /** duel seed when playing a duel, else null */
+  seed: number | null
   units: Unit[]
   snake: Segment[]
   /** path distance of the first segment */
