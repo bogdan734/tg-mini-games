@@ -48,14 +48,14 @@ button { font: inherit; }
 .hub .subtitle { color: #f3e9d2; }
 .ribbon {
   align-self: center;
-  border: 22px solid transparent;
-  border-image: url('./games/assets/ts/ui/Ribbon_Blue_3Slides.png') 64 fill / 22px stretch;
-  padding: 0 14px;
+  border-style: solid; border-color: transparent; border-width: 0 26px;
+  border-image: url('./games/assets/ts/ui/Ribbon_Blue_3Slides.png') 0 64 fill / 0 26px stretch;
+  padding: 0 6px; height: 52px; box-sizing: border-box;
   color: #fff; font-weight: 700; font-size: 20px; text-align: center;
-  min-width: 220px; line-height: 1;
+  min-width: 200px; line-height: 44px;
   text-shadow: 0 2px 0 rgba(0,0,0,.35);
 }
-.ribbon span { display: block; margin-top: -6px; }
+.ribbon span { display: block; }
 .parchment {
   border: 18px solid transparent;
   border-image: url('./games/assets/ts/ui/Carved_9Slides.png') 64 fill / 18px stretch;
@@ -63,9 +63,9 @@ button { font: inherit; }
 }
 .ts-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  border: 14px solid transparent;
-  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 64 fill / 14px stretch;
-  padding: 0 10px; min-width: 96px; height: 40px; box-sizing: border-box;
+  border-style: solid; border-color: transparent; border-width: 0 16px;
+  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 0 64 fill / 0 16px stretch;
+  padding: 0 6px; min-width: 96px; height: 42px; box-sizing: border-box;
   color: #fff; font-weight: 700; font-size: 15px; text-shadow: 0 1px 0 rgba(0,0,0,.4);
 }
 .ts-btn.red { border-image-source: url('./games/assets/ts/ui/Button_Red_3Slides.png'); }
@@ -147,9 +147,10 @@ button { font: inherit; }
 .profile-body b { color: #3a2a12; }
 .profile-coins { color: #8a5a00 !important; }
 .profile .chip {
-  background: none; border: 10px solid transparent; width: 42px; height: 42px; padding: 0;
-  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 64 fill / 10px stretch;
-  color: #fff; font-size: 16px;
+  background: none; padding: 0; width: 44px; height: 42px;
+  border-style: solid; border-color: transparent; border-width: 0 12px;
+  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 0 64 fill / 0 12px stretch;
+  color: #fff; font-size: 16px; line-height: 42px;
 }
 .profile-offline { color: #6b5636; font-size: 13px; }
 .profile-avatar {

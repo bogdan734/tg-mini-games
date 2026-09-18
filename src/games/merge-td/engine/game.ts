@@ -153,7 +153,7 @@ function tickTowers(s: GameState, dt: number): void {
     t.cooldown = 1 / TOWER_DEFS[t.type].rate
     const dmg = towerDamage(t)
     const p = pointAt(PATH, best.d)
-    s.fx.shots.push({ x: c.x, y: c.y - 16, tx: p.x, ty: p.y, t: 0, type: t.type })
+    s.fx.shots.push({ x: c.x, y: c.y - 16, tx: p.x, ty: p.y, t: 0, type: t.type, towerId: t.id })
     s.fx.sounds.push(`shot:${t.type}`)
     hit(s, best, dmg, TOWER_DEFS[t.type].color)
     applyEffect(s, t, best, dmg)
@@ -203,7 +203,7 @@ export function tickFx(s: GameState, dt: number): void {
   for (const sh of s.fx.shots) sh.t += dt
   for (const pt of s.fx.parts) { pt.t -= dt; pt.x += pt.vx * dt; pt.y += pt.vy * dt; pt.vy += 220 * dt }
   s.fx.popups = s.fx.popups.filter((p) => p.t > 0)
-  s.fx.shots = s.fx.shots.filter((sh) => sh.t < 0.14)
+  s.fx.shots = s.fx.shots.filter((sh) => sh.t < 0.9)
   s.fx.parts = s.fx.parts.filter((pt) => pt.t > 0)
   if (s.fx.shake > 0) s.fx.shake = Math.max(0, s.fx.shake - dt)
 }

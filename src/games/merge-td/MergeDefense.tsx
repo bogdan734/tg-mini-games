@@ -10,9 +10,8 @@ import {
 } from './engine/game'
 import type { GameState, Phase } from './engine/types'
 import {
-  choiceCloseRect, choiceRect, choiceRerollRect, drawGame, H, inRect, muteRect, sellZoneRect, tileAt, type ViewState, W, waveButtonRect,
+  choiceCloseRect, choiceRect, choiceRerollRect, drawGame, H, inRect, muteRect, preloadMergeAssets, sellZoneRect, tileAt, type ViewState, W, waveButtonRect,
 } from './render/draw'
-import { loadTowerSprites, type Sprites } from './render/sprites'
 
 const K_MUTED = 'std:muted'
 const readMuted = (): boolean => { try { return localStorage.getItem(K_MUTED) === '1' } catch { return false } }
@@ -22,7 +21,6 @@ export default function MergeDefense({ onScore }: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef<GameState>(createGame())
   const viewRef = useRef<ViewState>({ drag: null, selected: null, toast: null, muted: readMuted() })
-  const spritesRef = useRef<Sprites>({})
   const sfxRef = useRef<Sfx>(new Sfx())
   const scaleRef = useRef(1)
   const phaseRef = useRef<Phase>('ready')
@@ -34,7 +32,7 @@ export default function MergeDefense({ onScore }: GameProps) {
 
   useEffect(() => {
     sfxRef.current.muted = viewRef.current.muted
-    loadTowerSprites().then((sp) => { spritesRef.current = sp })
+    preloadMergeAssets()
     document.fonts?.load('700 16px Fredoka').catch(() => {})
   }, [])
 
@@ -100,7 +98,7 @@ export default function MergeDefense({ onScore }: GameProps) {
       }
       drain(s)
       syncPhase(s)
-      drawGame(ctx, s, spritesRef.current, v, now / 1000)
+      drawGame(ctx, s, v, now / 1000)
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
@@ -108,7 +106,7 @@ export default function MergeDefense({ onScore }: GameProps) {
       ;(window as unknown as { __mtd: unknown }).__mtd = {
         get state() { return stateRef.current },
         get view() { return viewRef.current },
-        step(sec: number) { const s = stateRef.current; for (let t = 0; t < sec; t += STEP) tick(s, STEP); s.fx.sounds.length = 0; syncPhase(s); drawGame(ctx, s, spritesRef.current, viewRef.current, performance.now() / 1000) },
+        step(sec: number) { const s = stateRef.current; for (let t = 0; t < sec; t += STEP) tick(s, STEP); s.fx.sounds.length = 0; syncPhase(s); drawGame(ctx, s, viewRef.current, performance.now() / 1000) },
         api: { startWave, openChoice, pickChoice, rerollChoice, moveOrMerge, sellTower, towerAt, reset: restart, sync: () => syncPhase(stateRef.current) },
       }
     }

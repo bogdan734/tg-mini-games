@@ -40,7 +40,7 @@ export interface Enemy {
 }
 
 export interface Popup { x: number; y: number; text: string; t: number; color: string }
-export interface Shot { x: number; y: number; tx: number; ty: number; t: number; type: TowerType }
+export interface Shot { x: number; y: number; tx: number; ty: number; t: number; type: TowerType; towerId: number }
 export interface Particle { x: number; y: number; vx: number; vy: number; t: number; color: string; r: number }
 
 export type Phase = 'menu' | 'ready' | 'wave' | 'over' | 'won'
