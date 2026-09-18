@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apiEnabled, submitScore, type ScoreResult } from '../../lib/api'
+import { apiEnabled, equippedNow, getMe, onProfile, ownedMapLevel, submitScore, type ScoreResult } from '../../lib/api'
 import { getValue, setValue } from '../../lib/storage'
 import { haptic, shareText } from '../../lib/telegram'
 import type { GameProps } from '../types'
@@ -27,7 +27,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef<GameState>(createGame(1))
-  const viewRef = useRef<ViewState>({ drag: null, selected: null, toast: null, muted: readMuted() })
+  const viewRef = useRef<ViewState>({ drag: null, selected: null, toast: null, muted: readMuted(), snakeSkin: equippedNow().snake })
   const spritesRef = useRef<Sprites>({})
   const sfxRef = useRef<Sfx>(new Sfx())
   const scaleRef = useRef(1)
@@ -44,15 +44,24 @@ export default function SnakeDefense({ onScore }: GameProps) {
   useEffect(() => {
     stateRef.current.phase = 'menu'
     sfxRef.current.muted = viewRef.current.muted
-    loadSprites().then((sp) => { spritesRef.current = sp })
     document.fonts?.load('700 16px Fredoka').catch(() => {})
+    // cosmetics + shop-unlocked maps follow the profile
+    const applyProfile = () => {
+      const eq = equippedNow()
+      viewRef.current.snakeSkin = eq.snake
+      loadSprites(eq.units.replace(/^units:/, '')).then((sp) => { spritesRef.current = sp })
+      setUnlocked((u) => Math.max(u, ownedMapLevel()))
+    }
+    applyProfile()
+    const off = onProfile(applyProfile)
+    void getMe()
     let alive = true
     Promise.all([getValue(K_UNLOCKED), ...LEVELS.map((l) => getValue(K_BEST(l.id)))]).then(([u, ...b]) => {
       if (!alive) return
       setUnlocked(Math.max(1, Number(u ?? 1)))
       setBest(Object.fromEntries(LEVELS.map((l, i) => [l.id, Number(b[i] ?? 0)])))
     })
-    return () => { alive = false }
+    return () => { alive = false; off() }
   }, [])
 
   // canvas sizing
@@ -95,7 +104,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
     haptic(s.phase === 'won' ? 'success' : 'error')
     onScore(s.score)
     setOnline(null)
-    if (apiEnabled()) void submitScore('snake-td', s.level, s.score, s.wave).then(setOnline)
+    if (apiEnabled()) void submitScore('snake-td', s.level, s.score, s.wave, s.phase === 'won').then(setOnline)
     const prev = best[s.level] ?? 0
     if (s.score > prev) {
       setBest((b) => ({ ...b, [s.level]: s.score }))
@@ -316,6 +325,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
             <br />Убито сегментов: {s.killed} · Очки: {s.score}
             {(best[s.level] ?? 0) < s.score && <><br />🎉 Новый рекорд карты</>}
             {online?.rank && <><br />🏆 Место в рейтинге: #{online.rank}{online.coinsEarned > 0 && ` · +${online.coinsEarned} 🪙`}</>}
+            {online && online.granted.length > 0 && <><br />🎁 Ивентовая награда получена — смотри в магазине</>}
           </p>
           {phase === 'won' && nextLevel && <button className="btn-primary" onClick={() => startLevel(nextLevel.id)}>{nextLevel.icon} Дальше: {nextLevel.name}</button>}
           <button className="btn-primary" onClick={() => startLevel(s.level)}>Ещё раз</button>

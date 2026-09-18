@@ -30,6 +30,16 @@ export interface ViewState {
   selected: number | null
   toast: { text: string; t: number } | null
   muted: boolean
+  /** snake skin id, e.g. "snake:lava" */
+  snakeSkin: string
+}
+
+interface SnakeSkin { body: [string, string]; bodyDark: (hp: number) => string; head: [string, string]; outline: string }
+export const SNAKE_SKINS: Record<string, SnakeSkin> = {
+  'snake:stone': { body: ['#d8dfeb', '#6b7590'], bodyDark: (hp) => `hsl(220, 20%, ${40 + hp * 25}%)`, head: ['#c9d2e3', '#6b7590'], outline: '#3a4258' },
+  'snake:lava': { body: ['#ffd27a', '#b3341a'], bodyDark: (hp) => `hsl(${10 + hp * 25}, 85%, ${32 + hp * 18}%)`, head: ['#ffe2a3', '#8f1f0d'], outline: '#3a0f08' },
+  'snake:ice': { body: ['#ffffff', '#5ea6e8'], bodyDark: (hp) => `hsl(205, 70%, ${55 + hp * 25}%)`, head: ['#e8f6ff', '#2f78c2'], outline: '#1e4a78' },
+  'snake:gold': { body: ['#fff3b0', '#c98a12'], bodyDark: (hp) => `hsl(42, 90%, ${40 + hp * 22}%)`, head: ['#fff7cc', '#a86f00'], outline: '#5a3a00' },
 }
 
 export const inRect = (r: Rect, x: number, y: number) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h
@@ -128,7 +138,7 @@ function drawLevelBadge(ctx: CanvasRenderingContext2D, u: Unit, x: number, y: nu
   text(ctx, String(u.level), x, y + 1, 13, '#fff', 'center', false)
 }
 
-function drawSnake(ctx: CanvasRenderingContext2D, s: GameState, lvl: LevelDef, time: number) {
+function drawSnake(ctx: CanvasRenderingContext2D, s: GameState, lvl: LevelDef, time: number, skin: SnakeSkin) {
   for (let i = s.snake.length - 1; i >= 0; i--) {
     const seg = s.snake[i]
     if (segmentD(s, i) < -5) continue
@@ -140,11 +150,11 @@ function drawSnake(ctx: CanvasRenderingContext2D, s: GameState, lvl: LevelDef, t
     const grad = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.2, p.x, p.y, r)
     if (seg.poison > 0) { grad.addColorStop(0, '#b6f2c9'); grad.addColorStop(1, '#3d9a5c') }
     else if (seg.slow > 0) { grad.addColorStop(0, '#dbeeff'); grad.addColorStop(1, '#5aa0e0') }
-    else if (seg.head) { grad.addColorStop(0, s.boss.kind === 'king' ? '#ffd9a8' : '#c9d2e3'); grad.addColorStop(1, s.boss.kind === 'king' ? '#b0642a' : s.boss.kind !== 'none' ? '#7a3f8f' : '#6b7590') }
-    else { grad.addColorStop(0, '#d8dfeb'); grad.addColorStop(1, `hsl(220, 20%, ${40 + hpRatio * 25}%)`) }
+    else if (seg.head) { grad.addColorStop(0, s.boss.kind === 'king' ? '#ffd9a8' : skin.head[0]); grad.addColorStop(1, s.boss.kind === 'king' ? '#b0642a' : s.boss.kind !== 'none' ? '#7a3f8f' : skin.head[1]) }
+    else { grad.addColorStop(0, skin.body[0]); grad.addColorStop(1, skin.bodyDark(hpRatio)) }
     ctx.fillStyle = grad
     ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill()
-    ctx.strokeStyle = '#3a4258'; ctx.lineWidth = 2.5; ctx.stroke()
+    ctx.strokeStyle = skin.outline; ctx.lineWidth = 2.5; ctx.stroke()
     if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${0.6 * flash})`; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill() }
     if (seg.head) {
       if (s.boss.shield > 0) {
@@ -329,7 +339,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, sprites: S
     if (!isDragged) drawLevelBadge(ctx, u, c.x + 18, c.y + 16)
   }
   drawShots(ctx, s)
-  drawSnake(ctx, s, lvl, time)
+  drawSnake(ctx, s, lvl, time, SNAKE_SKINS[view.snakeSkin] ?? SNAKE_SKINS['snake:stone'])
   drawParticles(ctx, s)
   for (const p of s.fx.popups) {
     ctx.globalAlpha = Math.min(1, p.t / 0.3)

@@ -1,5 +1,6 @@
 import { validateInitData, type TgUser } from './auth'
 import { COINS_PER_STAR, coinsForScore, DONATION_TIERS } from './economy'
+import { canBuy, canEquip, coinsForRun, defaultFor, eventGrants, ITEMS, EVENTS as SHOP_EVENTS, itemById } from './shop'
 import { BotApi, type Update } from './telegram'
 
 export interface Env {
@@ -61,6 +62,18 @@ async function authed(env: Env, req: Request): Promise<{ user: UserRow; tg: TgUs
   return { user, tg: data.user, startParam: data.start_param }
 }
 
+async function ownedItems(env: Env, userId: number): Promise<Set<string>> {
+  const rows = await env.DB.prepare('SELECT item_id FROM inventory WHERE user_id = ?').bind(userId).all<{ item_id: string }>()
+  return new Set(rows.results.map((r) => r.item_id))
+}
+
+async function equippedItems(env: Env, userId: number): Promise<Record<string, string>> {
+  const rows = await env.DB.prepare('SELECT slot, item_id FROM equipped WHERE user_id = ?').bind(userId).all<{ slot: string; item_id: string }>()
+  const out: Record<string, string> = { units: defaultFor('units'), snake: defaultFor('snake') }
+  for (const r of rows.results) out[r.slot] = r.item_id
+  return out
+}
+
 const publicUser = (u: UserRow) => ({ id: u.id, name: u.name, username: u.username, photo: u.photo, coins: u.coins, starsTotal: u.stars_total })
 
 async function leaderboard(env: Env, userId: number, game: string, level: number, scope: 'global' | 'friends') {
@@ -95,11 +108,16 @@ async function handleApi(env: Env, req: Request, url: URL): Promise<Response> {
   if (path === '/me') {
     const scores = await env.DB.prepare('SELECT game, level, score, wave FROM scores WHERE user_id = ?').bind(user.id).all()
     const referrals = await env.DB.prepare('SELECT COUNT(*) AS n FROM users WHERE referrer_id = ?').bind(user.id).first<{ n: number }>()
-    return json({ user: publicUser(user), scores: scores.results, referrals: referrals?.n ?? 0, inviteLink: `https://t.me/${env.BOT_USERNAME}?startapp=ref_${user.id}`, donationTiers: DONATION_TIERS })
+    const [owned, equipped] = await Promise.all([ownedItems(env, user.id), equippedItems(env, user.id)])
+    return json({
+      user: publicUser(user), scores: scores.results, referrals: referrals?.n ?? 0,
+      inviteLink: `https://t.me/${env.BOT_USERNAME}?startapp=ref_${user.id}`, donationTiers: DONATION_TIERS,
+      owned: [...owned], equipped,
+    })
   }
 
   if (path === '/score' && req.method === 'POST') {
-    const body = (await req.json().catch(() => null)) as { game?: string; level?: number; score?: number; wave?: number } | null
+    const body = (await req.json().catch(() => null)) as { game?: string; level?: number; score?: number; wave?: number; won?: boolean } | null
     if (!body || !GAMES.has(body.game ?? '') || !Number.isInteger(body.level) || !Number.isInteger(body.score) || (body.score ?? 0) < 0 || (body.score ?? 0) > 1e7) {
       return json({ error: 'bad score' }, 400)
     }
@@ -108,8 +126,13 @@ async function handleApi(env: Env, req: Request, url: URL): Promise<Response> {
     const now = Date.now()
     const prev = await env.DB.prepare('SELECT score FROM scores WHERE user_id = ? AND game = ? AND level = ?').bind(user.id, game, level).first<{ score: number }>()
     const prevBest = prev?.score ?? 0
-    const coins = coinsForScore(prevBest, score)
+    const coins = coinsForScore(prevBest, score) + coinsForRun(wave)
     const stmts: D1PreparedStatement[] = []
+    const owned = await ownedItems(env, user.id)
+    const granted = eventGrants({ won: body.won === true, level, now }).filter((id) => !owned.has(id))
+    for (const id of granted) {
+      stmts.push(env.DB.prepare('INSERT OR IGNORE INTO inventory (user_id, item_id, source, acquired_at) VALUES (?, ?, ?, ?)').bind(user.id, id, 'event:launch', now))
+    }
     if (score > prevBest) {
       stmts.push(env.DB.prepare(
         'INSERT INTO scores (user_id, game, level, score, wave, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, game, level) DO UPDATE SET score = excluded.score, wave = excluded.wave, updated_at = excluded.updated_at',
@@ -121,7 +144,7 @@ async function handleApi(env: Env, req: Request, url: URL): Promise<Response> {
     }
     if (stmts.length) await env.DB.batch(stmts)
     const board = await leaderboard(env, user.id, game, level, 'global')
-    return json({ best: Math.max(prevBest, score), improved: score > prevBest, coinsEarned: coins, coins: user.coins + coins, rank: board.me.rank })
+    return json({ best: Math.max(prevBest, score), improved: score > prevBest, coinsEarned: coins, coins: user.coins + coins, rank: board.me.rank, granted })
   }
 
   if (path === '/leaderboard') {
@@ -130,6 +153,39 @@ async function handleApi(env: Env, req: Request, url: URL): Promise<Response> {
     const scope = url.searchParams.get('scope') === 'friends' ? 'friends' : 'global'
     if (!GAMES.has(game) || !Number.isInteger(level)) return json({ error: 'bad params' }, 400)
     return json(await leaderboard(env, user.id, game, level, scope))
+  }
+
+  if (path === '/shop') {
+    const [owned, equipped] = await Promise.all([ownedItems(env, user.id), equippedItems(env, user.id)])
+    return json({ items: ITEMS, events: SHOP_EVENTS, owned: [...owned], equipped, coins: user.coins })
+  }
+
+  if (path === '/shop/buy' && req.method === 'POST') {
+    const body = (await req.json().catch(() => null)) as { item?: string } | null
+    const id = body?.item ?? ''
+    const owned = await ownedItems(env, user.id)
+    const err = canBuy(id, owned, user.coins)
+    if (err) return json({ error: err }, err === 'poor' ? 402 : 400)
+    const price = itemById(id)!.price!
+    const now = Date.now()
+    // guard against double-spend: the UPDATE only succeeds if the balance still covers the price
+    const upd = await env.DB.prepare('UPDATE users SET coins = coins - ? WHERE id = ? AND coins >= ?').bind(price, user.id, price).run()
+    if (!upd.meta.changes) return json({ error: 'poor' }, 402)
+    await env.DB.batch([
+      env.DB.prepare('INSERT OR IGNORE INTO inventory (user_id, item_id, source, acquired_at) VALUES (?, ?, ?, ?)').bind(user.id, id, 'shop', now),
+      env.DB.prepare('INSERT INTO coin_log (user_id, delta, reason, created_at) VALUES (?, ?, ?, ?)').bind(user.id, -price, `buy:${id}`, now),
+    ])
+    owned.add(id)
+    return json({ ok: true, coins: user.coins - price, owned: [...owned] })
+  }
+
+  if (path === '/shop/equip' && req.method === 'POST') {
+    const body = (await req.json().catch(() => null)) as { slot?: string; item?: string } | null
+    const slot = body?.slot ?? '', id = body?.item ?? ''
+    const owned = await ownedItems(env, user.id)
+    if (!canEquip(slot, id, owned)) return json({ error: 'cannot equip' }, 400)
+    await env.DB.prepare('INSERT INTO equipped (user_id, slot, item_id) VALUES (?, ?, ?) ON CONFLICT(user_id, slot) DO UPDATE SET item_id = excluded.item_id').bind(user.id, slot, id).run()
+    return json({ ok: true, equipped: await equippedItems(env, user.id) })
   }
 
   if (path === '/donate' && req.method === 'POST') {

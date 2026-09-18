@@ -3,10 +3,11 @@ import { apiEnabled, getMe, onProfile, type Profile } from '../lib/api'
 import { haptic, shareText } from '../lib/telegram'
 import Donate from './Donate'
 import Leaderboard from './Leaderboard'
+import Shop from './Shop'
 
 export default function ProfileCard() {
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [modal, setModal] = useState<'board' | 'donate' | null>(null)
+  const [modal, setModal] = useState<'board' | 'donate' | 'shop' | null>(null)
 
   useEffect(() => {
     void getMe()
@@ -27,6 +28,7 @@ export default function ProfileCard() {
           <span className="profile-coins">🪙 {u?.coins ?? 0}</span>
         </div>
         <div className="profile-actions">
+          <button className="chip" onClick={() => { haptic('light'); setModal('shop') }}>🛒</button>
           <button className="chip" onClick={() => { haptic('light'); setModal('board') }}>🏆</button>
           <button className="chip" onClick={() => { haptic('light'); setModal('donate') }}>⭐</button>
           <button className="chip" onClick={() => { haptic('light'); if (profile) shareText('Залетай в мини-игры, го соревноваться 🎮', profile.inviteLink) }}>👥</button>
@@ -34,6 +36,7 @@ export default function ProfileCard() {
       </div>
       {modal === 'board' && <Leaderboard onClose={() => setModal(null)} />}
       {modal === 'donate' && profile && <Donate tiers={profile.donationTiers} onClose={() => setModal(null)} />}
+      {modal === 'shop' && <Shop onClose={() => setModal(null)} onDonate={() => setModal('donate')} />}
     </>
   )
 }
