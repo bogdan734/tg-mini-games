@@ -3,6 +3,7 @@ import { GAMES } from '../games/registry'
 import { getBest } from '../lib/storage'
 import { goGame } from '../lib/router'
 import { haptic, userName } from '../lib/telegram'
+import ProfileCard from '../components/ProfileCard'
 
 export default function Hub() {
   const [best, setBest] = useState<Record<string, number>>({})
@@ -21,6 +22,7 @@ export default function Hub() {
         <h1 className="title">Привет, {userName()} 👋</h1>
         <p className="subtitle">Выбери игру</p>
       </div>
+      <ProfileCard />
       <div className="game-grid">
         {GAMES.map((g) => (
           <button

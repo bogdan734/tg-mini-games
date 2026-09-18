@@ -1,0 +1,20 @@
+name = "tg-mini-games"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+WEBAPP_URL = "https://bogdan734.github.io/tg-mini-games/"
+BOT_USERNAME = "ADS_gamesBoT"
+ALLOWED_ORIGINS = "https://bogdan734.github.io,http://localhost:5173"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tg-mini-games"
+database_id = "35ba927d-9504-4a01-850e-cd9f578a8954"
+migrations_dir = "migrations"
+
+# Secrets (wrangler secret put): BOT_TOKEN, WEBHOOK_SECRET

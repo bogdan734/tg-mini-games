@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiEnabled, submitScore, type ScoreResult } from '../../lib/api'
 import { getValue, setValue } from '../../lib/storage'
 import { haptic, shareText } from '../../lib/telegram'
 import type { GameProps } from '../types'
@@ -35,6 +36,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
   const [phase, setPhase] = useState<Phase>('menu')
   const [unlocked, setUnlocked] = useState(1)
   const [best, setBest] = useState<Record<number, number>>({})
+  const [online, setOnline] = useState<ScoreResult | null>(null)
   const [, bump] = useState(0)
 
   const toast = (text: string) => { viewRef.current.toast = { text, t: 1.4 } }
@@ -92,6 +94,8 @@ export default function SnakeDefense({ onScore }: GameProps) {
     reportedRef.current = true
     haptic(s.phase === 'won' ? 'success' : 'error')
     onScore(s.score)
+    setOnline(null)
+    if (apiEnabled()) void submitScore('snake-td', s.level, s.score, s.wave).then(setOnline)
     const prev = best[s.level] ?? 0
     if (s.score > prev) {
       setBest((b) => ({ ...b, [s.level]: s.score }))
@@ -311,6 +315,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
             {phase === 'won' ? `«${lvl.name}»: все ${maxWave(s)} волн отбиты` : `«${lvl.name}»: дошёл до волны ${s.wave}`}
             <br />Убито сегментов: {s.killed} · Очки: {s.score}
             {(best[s.level] ?? 0) < s.score && <><br />🎉 Новый рекорд карты</>}
+            {online?.rank && <><br />🏆 Место в рейтинге: #{online.rank}{online.coinsEarned > 0 && ` · +${online.coinsEarned} 🪙`}</>}
           </p>
           {phase === 'won' && nextLevel && <button className="btn-primary" onClick={() => startLevel(nextLevel.id)}>{nextLevel.icon} Дальше: {nextLevel.name}</button>}
           <button className="btn-primary" onClick={() => startLevel(s.level)}>Ещё раз</button>

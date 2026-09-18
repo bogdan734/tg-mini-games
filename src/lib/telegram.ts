@@ -40,8 +40,7 @@ export function initTelegram(): void {
 }
 
 /** Share a text with friends via Telegram's share sheet (falls back to Web Share / clipboard). */
-export function shareText(text: string): void {
-  const url = `https://t.me/${BOT_USERNAME}`
+export function shareText(text: string, url = `https://t.me/${BOT_USERNAME}`): void {
   if (isTelegram) {
     WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`)
     return
@@ -75,3 +74,14 @@ export function userName(): string {
 }
 
 export { WebApp }
+
+/** Open a Telegram Stars invoice; resolves with the final status ('paid' | 'cancelled' | 'failed' | 'pending'). */
+export function openInvoice(link: string): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      WebApp.openInvoice(link, (status) => resolve(status))
+    } catch {
+      resolve('failed')
+    }
+  })
+}

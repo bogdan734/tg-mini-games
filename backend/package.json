@@ -1,0 +1,19 @@
+{
+  "name": "tg-mini-games-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "db:migrate": "wrangler d1 migrations apply tg-mini-games --remote",
+    "db:migrate:local": "wrangler d1 migrations apply tg-mini-games --local"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260918.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.40.0"
+  }
+}

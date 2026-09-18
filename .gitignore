@@ -26,3 +26,6 @@ dist-ssr
 # bot
 bot/.env
 bot/node_modules
+backend/node_modules
+backend/.wrangler
+backend/.dev.vars
