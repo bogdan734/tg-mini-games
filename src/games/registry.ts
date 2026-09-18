@@ -17,10 +17,10 @@ export const GAMES: GameMeta[] = [
   {
     id: 'snake-td',
     title: 'Snake Defense',
-    description: 'Змея ползёт по кольцу — режь сегменты, прокачивай бойцов',
+    description: 'Змея ползёт к воротам — ставь и сливай бойцов, 10 волн',
     icon: '🐍',
-    ready: false,
-    component: lazy(() => import('./coming-soon/ComingSoon')),
+    ready: true,
+    component: lazy(() => import('./snake-td/SnakeDefense')),
   },
   {
     id: 'catch-dot',

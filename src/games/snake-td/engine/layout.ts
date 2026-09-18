@@ -12,10 +12,11 @@ export const SLOT_R = 26
 export const PATH: Path = boardPath(BOARD_W, BOARD_H, PATH_INSET)
 
 function buildSlots(): Vec[] {
-  const left = PATH_INSET + PATH_WIDTH / 2 + 14
-  const right = BOARD_W - 14
-  const top = PATH_INSET + PATH_WIDTH / 2 + 14
-  const bottom = BOARD_H - PATH_INSET - PATH_WIDTH / 2 - 14
+  const inner = PATH_INSET + PATH_WIDTH / 2 + 12
+  const left = inner
+  const right = BOARD_W - inner
+  const top = inner
+  const bottom = BOARD_H - inner
   const cw = (right - left) / SLOT_COLS
   const ch = (bottom - top) / SLOT_ROWS
   const out: Vec[] = []

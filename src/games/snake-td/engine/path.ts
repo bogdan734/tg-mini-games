@@ -30,15 +30,18 @@ function arc(cx: number, cy: number, r: number, a0: number, a1: number, n = 6): 
 }
 
 /**
- * C-shaped road with rounded corners:
- * spawn (top-right) → left along top → down the left side → right along bottom → gate (bottom-right).
+ * Ring road with rounded corners: spawn (top-right) → left along the top → down the left side
+ * → right along the bottom → up the right side → gate just below the spawn.
+ * `gateGap` is the vertical distance between spawn and gate.
  */
-export function boardPath(w: number, h: number, m: number, r = 40): Path {
+export function boardPath(w: number, h: number, m: number, r = 40, gateGap = 70): Path {
   const pts: Vec[] = [{ x: w - m, y: m }]
   pts.push({ x: m + r, y: m })
   pts.push(...arc(m + r, m + r, r, -Math.PI / 2, -Math.PI))
   pts.push({ x: m, y: h - m - r })
   pts.push(...arc(m + r, h - m - r, r, Math.PI, Math.PI / 2))
-  pts.push({ x: w - m, y: h - m })
+  pts.push({ x: w - m - r, y: h - m })
+  pts.push(...arc(w - m - r, h - m - r, r, Math.PI / 2, 0))
+  pts.push({ x: w - m, y: m + gateGap })
   return makePath(pts)
 }

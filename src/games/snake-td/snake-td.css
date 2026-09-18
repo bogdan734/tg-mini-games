@@ -1,0 +1,50 @@
+.std-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+.std-canvas {
+  display: block;
+  touch-action: none;
+  border-radius: 14px;
+  background: #1b1e2b;
+}
+.std-modal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(10, 12, 20, 0.82);
+  backdrop-filter: blur(4px);
+  border-radius: 14px;
+}
+.std-modal h2 { margin: 0; font-size: 26px; }
+.std-cards { display: flex; gap: 12px; width: 100%; }
+.std-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 10px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: #262b3d;
+  color: var(--text);
+  cursor: pointer;
+}
+.std-card b { font-size: 16px; }
+.std-card span { font-size: 20px; font-weight: 700; }
+.std-card small { color: var(--hint); font-size: 11px; }
+.std-card.safe { border-color: #5b8cff; }
+.std-card.risky { border-color: #ff4d6d; }
+.std-card:active { transform: scale(0.97); }
+.std-event-icon { font-size: 56px; line-height: 1; }
