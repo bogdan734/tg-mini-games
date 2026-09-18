@@ -13,7 +13,7 @@ const MAP_ICON: Record<number, string> = { 2: '🏜️', 3: '❄️', 4: '♾️
 const ERR: Record<string, string> = { poor: 'Не хватает монет', event_only: 'Только за ивент', owned: 'Уже есть', offline: 'Открой в Telegram' }
 
 function Preview({ item }: { item: ShopItem }) {
-  if (item.kind === 'units') return <img className="shop-img" src={`${import.meta.env.BASE_URL}games/snake-td/units/${item.id.slice(6)}/frost_2.png`} alt="" />
+  if (item.kind === 'units') return <img className="shop-img" src={`${import.meta.env.BASE_URL}games/snake-td/units/${item.id.slice(6)}/blaze_2.png`} alt="" />
   if (item.kind === 'snake') return <span className="shop-swatch" style={{ background: SNAKE_SWATCH[item.id] }} />
   return <span className="shop-emoji">{MAP_ICON[item.level ?? 0] ?? '🗺️'}</span>
 }

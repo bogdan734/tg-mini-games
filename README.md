@@ -55,6 +55,9 @@ npm test           # vitest: движки игр
 | `POST /api/score` `{game, level, score, wave}` | сохраняет рекорд, начисляет монеты (1 за 50 очков улучшения), отдаёт место |
 | `GET /api/leaderboard?game&level&scope=global\|friends` | топ-50 + моё место; друзья = кого пригласил / кто пригласил |
 | `POST /api/donate` `{stars}` | ссылка на инвойс Telegram Stars |
+| `GET /api/shop` | каталог (`shared/catalog.json`), что куплено/надето, монеты |
+| `POST /api/shop/buy` `{item}` | покупка за монеты (ивентовые вещи не продаются) |
+| `POST /api/shop/equip` `{slot, item}` | надеть свой/дефолтный скин |
 | `POST /webhook` | обновления бота: `/start`, pre-checkout, successful_payment (+10 монет за ⭐) |
 
 ```bash
@@ -69,7 +72,15 @@ npm run db:migrate       # миграции D1 на проде
 webhook на Worker — `bot/index.mjs` (polling) больше не нужен; если запускать его локально,
 сначала снять webhook (`deleteWebhook`).
 
-Фронт берёт адрес API из `.env.production` (`VITE_API_URL`); вне Telegram API отключён.
+Фронт берёт адрес API из `.env.production` / `.env.development` (`VITE_API_URL`); вне Telegram API
+отключён. Для QA в браузере: в dev положить подписанный `initData` в `localStorage.devInitData`.
+
+## Магазин и экономика
+
+Единая валюта 🪙. Источники: 1 за 50 очков улучшения рекорда, до 5 за партию, 20 за приглашённого
+друга, 10 за ⭐ (донат). Тратится на косметику (наборы бойцов, скины змеи) и ранний доступ к картам,
+которые и так открываются прохождением. Ивентовые скины не продаются. Каталог — `shared/catalog.json`,
+правила — `backend/src/shop.ts` (тесты в `backend/test/shop.test.ts`).
 
 ## Первый запуск (один раз)
 
