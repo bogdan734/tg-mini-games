@@ -189,7 +189,7 @@ function drawPanel(ctx: CanvasRenderingContext2D, s: GameState, sprites: Sprites
     ctx.strokeStyle = s.gold >= s.rerollCost ? '#8d7bff' : '#3a3f55'; ctx.lineWidth = 2; ctx.stroke()
     text(ctx, '🔄', rr.x + rr.w / 2, rr.y + 36, 26, '#fff', 'center', false)
     text(ctx, `${s.rerollCost} 💰`, rr.x + rr.w / 2, rr.y + 78, 12, '#ffd54a', 'center', false)
-    text(ctx, 'Выбери стихию для плитки · тап мимо — отмена', W / 2, PANEL_Y + 130, 12, '#aab0cc', 'center', false)
+    text(ctx, 'Выбери стихию · тап мимо — отмена', W / 2, PANEL_Y + 130, 12, '#aab0cc', 'center', false)
     return
   }
   // idle panel: merge hints / recipe book
@@ -212,7 +212,7 @@ function drawPanel(ctx: CanvasRenderingContext2D, s: GameState, sprites: Sprites
     }
     return
   }
-  text(ctx, 'Тапни плитку — поставить башню · тяни башню на башню — слияние', W / 2, y, 12, '#aab0cc', 'center', false)
+  text(ctx, 'Тап по плитке — башня · башню на башню — слияние', W / 2, y, 12, '#aab0cc', 'center', false)
   if (merges.length) {
     text(ctx, 'Можно слить сейчас:', 14, y + 26, 13, '#ffd54a', 'left', false)
     merges.slice(0, 4).forEach((m, i) => {
