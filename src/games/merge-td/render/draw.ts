@@ -64,7 +64,7 @@ const A = {
   shadow: sheet(assetUrl('terrain/shadows.png'), 192, 192),
   castle: sheet(assetUrl('buildings/castle_blue.png'), 320, 256),
   lair: sheet(assetUrl('buildings/goblin_house.png'), 128, 192),
-  woodTower: sheet(assetUrl('buildings/wood_tower_red.png'), 128, 256),
+  woodTower: sheet(assetUrl('buildings/wood_tower_red.png'), 256, 192),
   stoneTower: sheet(assetUrl('buildings/tower_blue.png'), 128, 256),
   tree: sheet(assetUrl('deco/tree.png'), 192, 192),
   gold: sheet(assetUrl('ui/gold.png'), 128, 128),
@@ -162,7 +162,7 @@ function drawTowers(ctx: CanvasRenderingContext2D, s: GameState, view: ViewState
     const isDragged = drag?.towerId === t.id
     const alpha = isDragged ? 0.3 : 1
     let uy = c.y - 8
-    if (look.mount === 'wood') { drawImage(ctx, A.woodTower, c.x, c.y - 10, 40, 80, alpha); uy = c.y - 40 }
+    if (look.mount === 'wood') { drawFrame(ctx, A.woodTower, Math.floor(time * 6) % 4, 0, c.x, c.y - 4, 68, 51, false, alpha); uy = c.y - 30 }
     else if (look.mount === 'stone') { drawImage(ctx, A.stoneTower, c.x, c.y - 14, 46, 92, alpha); uy = c.y - 50 }
     else drawImage(ctx, A.shadow, c.x, c.y + 12, 52, 30, 0.8 * alpha)
     drawTroop(ctx, look.f, look.c, t.id, c.x, uy, look.mount === 'none' ? 72 : 60, time, false, alpha)

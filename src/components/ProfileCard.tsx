@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiEnabled, getMe, onProfile, type Profile } from '../lib/api'
+import { apiEnabled, getMe, onProfile, profileError, type Profile } from '../lib/api'
 import { haptic, shareText } from '../lib/telegram'
 import Donate from './Donate'
 import Leaderboard from './Leaderboard'
@@ -9,13 +9,27 @@ import Quests from './Quests'
 export default function ProfileCard() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [modal, setModal] = useState<'board' | 'donate' | 'shop' | 'quests' | null>(null)
+  const [failed, setFailed] = useState<string | null>(null)
 
+  const load = () => { setFailed(null); void getMe(true).then((p) => { if (!p) setFailed(profileError ?? 'network') }) }
   useEffect(() => {
-    void getMe()
+    void getMe().then((p) => { if (!p) setFailed(profileError ?? 'network') })
     return onProfile(setProfile)
   }, [])
 
   const u = profile?.user
+  if (apiEnabled() && !profile && failed) {
+    return (
+      <div className="profile">
+        <div className="profile-avatar"><span>!</span></div>
+        <div className="profile-body">
+          <b>Профиль не загрузился</b>
+          <span className="profile-offline">{failed}</span>
+        </div>
+        <button className="chip" onClick={() => { haptic('light'); load() }}>↻</button>
+      </div>
+    )
+  }
   if (!apiEnabled()) {
     return (
       <div className="profile">

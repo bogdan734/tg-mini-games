@@ -44,6 +44,8 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 let profileCache: Profile | null = null
+/** Why the last profile load failed (shown in the hub so problems are visible, not silent). */
+export let profileError: string | null = null
 const listeners = new Set<(p: Profile | null) => void>()
 export const onProfile = (fn: (p: Profile | null) => void): (() => void) => { listeners.add(fn); return () => listeners.delete(fn) }
 const notify = () => listeners.forEach((fn) => fn(profileCache))
@@ -53,8 +55,10 @@ export async function getMe(force = false): Promise<Profile | null> {
   if (profileCache && !force) return profileCache
   try {
     profileCache = await call<Profile>('/api/me')
-  } catch {
+    profileError = null
+  } catch (e) {
     profileCache = null
+    profileError = e instanceof Error ? e.message : 'network'
   }
   notify()
   return profileCache
