@@ -40,24 +40,58 @@ button { font: inherit; }
 .title { font-size: 24px; font-weight: 700; margin: 0; }
 .subtitle { color: var(--hint); margin: 0; font-size: 14px; }
 
-/* Hub */
+/* Hub (Tiny Swords look) */
+.hub {
+  background: url('./games/assets/ts/terrain/grass_tile.png') repeat;
+  background-size: 64px 64px;
+}
+.hub .subtitle { color: #f3e9d2; }
+.ribbon {
+  align-self: center;
+  border: 22px solid transparent;
+  border-image: url('./games/assets/ts/ui/Ribbon_Blue_3Slides.png') 64 fill / 22px stretch;
+  padding: 0 14px;
+  color: #fff; font-weight: 700; font-size: 20px; text-align: center;
+  min-width: 220px; line-height: 1;
+  text-shadow: 0 2px 0 rgba(0,0,0,.35);
+}
+.ribbon span { display: block; margin-top: -6px; }
+.parchment {
+  border: 18px solid transparent;
+  border-image: url('./games/assets/ts/ui/Carved_9Slides.png') 64 fill / 18px stretch;
+  color: #3a2a12;
+}
+.ts-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 14px solid transparent;
+  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 64 fill / 14px stretch;
+  padding: 0 10px; min-width: 96px; height: 40px; box-sizing: border-box;
+  color: #fff; font-weight: 700; font-size: 15px; text-shadow: 0 1px 0 rgba(0,0,0,.4);
+}
+.ts-btn.red { border-image-source: url('./games/assets/ts/ui/Button_Red_3Slides.png'); }
+.game-list { display: flex; flex-direction: column; gap: 14px; }
 .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .game-card {
   position: relative;
-  background: var(--bg-2);
-  border: 0;
-  border-radius: var(--radius);
-  padding: 16px 12px;
-  color: var(--text);
+  padding: 0;
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 140px;
+  gap: 0;
   cursor: pointer;
   transition: transform .08s ease;
+  background: #e8d7b0;
 }
+.game-cover {
+  position: relative; height: 128px; margin: -6px -6px 0;
+  background-size: cover; background-position: center; border-radius: 6px 6px 0 0;
+}
+.game-body { display: flex; align-items: center; gap: 10px; padding: 8px 2px 0; }
+.game-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.game-card .name { color: #3a2a12; }
+.game-card .desc { color: #6b5636; }
+.game-card .best { margin-top: 2px; color: #1f5fbf; }
 .game-card:active { transform: scale(.97); }
 .game-card[disabled] { opacity: .55; cursor: default; }
 .game-card .icon { font-size: 36px; line-height: 1; }
@@ -106,8 +140,18 @@ button { font: inherit; }
 /* Profile & sheets */
 .profile {
   display: flex; align-items: center; gap: 12px;
-  background: var(--bg-2); border-radius: var(--radius); padding: 10px 12px;
+  background: #e8d7b0; border: 16px solid transparent;
+  border-image: url('./games/assets/ts/ui/Carved_9Slides.png') 64 fill / 16px stretch;
+  color: #3a2a12; padding: 0 2px;
 }
+.profile-body b { color: #3a2a12; }
+.profile-coins { color: #8a5a00 !important; }
+.profile .chip {
+  background: none; border: 10px solid transparent; width: 42px; height: 42px; padding: 0;
+  border-image: url('./games/assets/ts/ui/Button_Blue_3Slides.png') 64 fill / 10px stretch;
+  color: #fff; font-size: 16px;
+}
+.profile-offline { color: #6b5636; font-size: 13px; }
 .profile-avatar {
   width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex: none;
   background: var(--accent); color: var(--accent-text);

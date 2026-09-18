@@ -11,10 +11,9 @@ import { getLevel, LEVELS, unlockAfterWin } from './engine/levels'
 import type { GameState, Phase } from './engine/types'
 import { canMerge, EVO_MUL, UNIT_DEFS } from './engine/units'
 import {
-  drawGame, H, inRect, muteRect, sellZoneRect, shopCardRect, slotAt, type ViewState, W, waveButtonRect,
+  drawGame, H, inRect, muteRect, preloadSnakeAssets, sellZoneRect, shopCardRect, slotAt, type ViewState, W, waveButtonRect,
 } from './render/draw'
 import { Sfx } from './render/sfx'
-import { loadSprites, type Sprites } from './render/sprites'
 import './snake-td.css'
 
 const K_UNLOCKED = 'std:unlocked'
@@ -27,8 +26,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef<GameState>(createGame(1))
-  const viewRef = useRef<ViewState>({ drag: null, selected: null, toast: null, muted: readMuted(), snakeSkin: equippedNow().snake })
-  const spritesRef = useRef<Sprites>({})
+  const viewRef = useRef<ViewState>({ drag: null, selected: null, toast: null, muted: readMuted(), unitSkin: equippedNow().units, snakeSkin: equippedNow().snake })
   const sfxRef = useRef<Sfx>(new Sfx())
   const scaleRef = useRef(1)
   const phaseRef = useRef<Phase>('menu')
@@ -49,10 +47,11 @@ export default function SnakeDefense({ onScore }: GameProps) {
     sfxRef.current.muted = viewRef.current.muted
     document.fonts?.load('700 16px Fredoka').catch(() => {})
     // cosmetics + shop-unlocked maps follow the profile
+    preloadSnakeAssets()
     const applyProfile = () => {
       const eq = equippedNow()
       viewRef.current.snakeSkin = eq.snake
-      loadSprites(eq.units.replace(/^units:/, '')).then((sp) => { spritesRef.current = sp })
+      viewRef.current.unitSkin = eq.units
       setUnlocked((u) => Math.max(u, ownedMapLevel()))
     }
     applyProfile()
@@ -171,7 +170,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
       }
       drain(s)
       syncPhase(s)
-      drawGame(ctx, s, spritesRef.current, v, now / 1000)
+      drawGame(ctx, s, v, now / 1000)
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
@@ -184,7 +183,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
           for (let t = 0; t < sec; t += STEP) tick(s, STEP)
           s.fx.sounds.length = 0
           syncPhase(s)
-          drawGame(ctx, s, spritesRef.current, viewRef.current, performance.now() / 1000)
+          drawGame(ctx, s, viewRef.current, performance.now() / 1000)
         },
         api: { startWave, resolveEvent, chooseEvolution, buyAndPlace, moveOrMerge, reroll, unitAt, canMerge, sync: () => syncPhase(stateRef.current), reset: startLevel },
       }

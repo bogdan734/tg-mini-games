@@ -43,7 +43,7 @@ export interface Segment {
 export type BossKind = 'none' | 'regen' | 'dash' | 'shield' | 'king'
 export interface BossState { kind: BossKind; timer: number; next: number; dashT: number; shield: number }
 
-export interface Shot { x: number; y: number; tx: number; ty: number; t: number; type: UnitType }
+export interface Shot { x: number; y: number; tx: number; ty: number; t: number; type: UnitType; unitId: number; segId: number }
 export interface Particle { x: number; y: number; vx: number; vy: number; t: number; color: string; r: number }
 
 

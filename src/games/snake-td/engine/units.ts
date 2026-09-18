@@ -1,11 +1,11 @@
 import type { Evo, Unit, UnitDef, UnitType } from './types'
 
 export const UNIT_DEFS: Record<UnitType, UnitDef> = {
-  volt:   { type: 'volt',   name: 'Вольт',  color: '#ffd54a', price: 15, dmg: 1, rate: 3,   range: 135, desc: 'Быстрые удары' },
-  frost:  { type: 'frost',  name: 'Фрост',  color: '#5bc8ff', price: 20, dmg: 2, rate: 1.2, range: 145, desc: 'Замедляет змею' },
-  blaze:  { type: 'blaze',  name: 'Блейз',  color: '#ff5a5a', price: 25, dmg: 3, rate: 0.9, range: 125, desc: 'Урон по соседям' },
-  venom:  { type: 'venom',  name: 'Веном',  color: '#4de08a', price: 25, dmg: 2, rate: 1,   range: 140, desc: 'Яд, урон со временем' },
-  shadow: { type: 'shadow', name: 'Шэдоу', color: '#8d7bff', price: 35, dmg: 7, rate: 0.5, range: 200, desc: 'Дальний мощный удар' },
+  volt:   { type: 'volt',   name: 'Лучник',     color: '#ffd54a', price: 15, dmg: 1, rate: 3,   range: 150, desc: 'Быстрые стрелы, иногда две' },
+  frost:  { type: 'frost',  name: 'Кузнец',     color: '#5bc8ff', price: 20, dmg: 2, rate: 1.2, range: 130, desc: 'Молот оглушает и замедляет' },
+  blaze:  { type: 'blaze',  name: 'Подрывник',  color: '#ff5a5a', price: 25, dmg: 3, rate: 0.9, range: 140, desc: 'Динамит бьёт по соседям' },
+  venom:  { type: 'venom',  name: 'Факельщик',  color: '#4de08a', price: 25, dmg: 2, rate: 1,   range: 130, desc: 'Поджигает: урон со временем' },
+  shadow: { type: 'shadow', name: 'Рыцарь',     color: '#8d7bff', price: 35, dmg: 7, rate: 0.5, range: 120, desc: 'Тяжёлый удар мечом' },
 }
 
 export const UNIT_TYPES = Object.keys(UNIT_DEFS) as UnitType[]

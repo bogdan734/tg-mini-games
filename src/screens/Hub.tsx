@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { GAMES } from '../games/registry'
-import { getBest } from '../lib/storage'
-import { goGame } from '../lib/router'
-import { haptic, startParam, userName } from '../lib/telegram'
-import { setPendingDuel } from '../lib/api'
 import ProfileCard from '../components/ProfileCard'
+import { GAMES } from '../games/registry'
+import { setPendingDuel } from '../lib/api'
+import { goGame } from '../lib/router'
+import { getBest } from '../lib/storage'
+import { haptic, startParam } from '../lib/telegram'
 
 export default function Hub() {
   const [best, setBest] = useState<Record<string, number>>({})
@@ -23,25 +23,28 @@ export default function Hub() {
   }, [])
 
   return (
-    <div className="screen">
-      <div>
-        <h1 className="title">Привет, {userName()} 👋</h1>
-        <p className="subtitle">Выбери игру</p>
-      </div>
+    <div className="screen hub">
+      <div className="hub-title ribbon"><span>Mini Games</span></div>
       <ProfileCard />
-      <div className="game-grid">
+      <div className="game-list">
         {GAMES.map((g) => (
           <button
             key={g.id}
-            className="game-card"
+            className="game-card parchment"
             disabled={!g.ready}
             onClick={() => { haptic('light'); goGame(g.id) }}
           >
-            {!g.ready && <span className="badge">Скоро</span>}
-            <span className="icon">{g.icon}</span>
-            <span className="name">{g.title}</span>
-            <span className="desc">{g.description}</span>
-            {g.ready && <span className="best">Рекорд: {best[g.id] ?? 0}</span>}
+            <div className="game-cover" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}games/covers/${g.id}.png)` }}>
+              {!g.ready && <span className="badge">Скоро</span>}
+            </div>
+            <div className="game-body">
+              <div className="game-text">
+                <span className="name">{g.icon} {g.title}</span>
+                <span className="desc">{g.description}</span>
+                {g.ready && <span className="best">Рекорд: {best[g.id] ?? 0}</span>}
+              </div>
+              <span className="ts-btn">Играть</span>
+            </div>
           </button>
         ))}
       </div>

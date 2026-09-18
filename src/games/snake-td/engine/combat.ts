@@ -18,8 +18,7 @@ function applyHit(s: GameState, i: number, dmg: number, u: Unit, from: Vec, prim
   const p = pointAt(getLevel(s.level).path, segmentPos(s, i))
   const color = UNIT_DEFS[u.type].color
   if (primary) {
-    if (u.type === 'volt') s.fx.beams.push({ from, to: p, t: 0.12, color })
-    else s.fx.shots.push({ x: from.x, y: from.y, tx: p.x, ty: p.y, t: 0, type: u.type })
+    s.fx.shots.push({ x: from.x, y: from.y, tx: p.x, ty: p.y, t: 0, type: u.type, unitId: u.id, segId: seg.id })
   }
   s.fx.popups.push({ x: p.x, y: p.y - 12, text: String(Math.round(dealt)), t: 0.6, color: dealt < dmg ? '#9fb3ff' : color })
 }
@@ -83,7 +82,7 @@ export function tickFx(s: GameState, dt: number): void {
   for (const pt of s.fx.parts) { pt.t -= dt; pt.x += pt.vx * dt; pt.y += pt.vy * dt; pt.vy += 220 * dt }
   s.fx.popups = s.fx.popups.filter((p) => p.t > 0)
   s.fx.beams = s.fx.beams.filter((b) => b.t > 0)
-  s.fx.shots = s.fx.shots.filter((sh) => sh.t < 0.14)
+  s.fx.shots = s.fx.shots.filter((sh) => sh.t < 0.9)
   s.fx.parts = s.fx.parts.filter((pt) => pt.t > 0)
   if (s.fx.shake > 0) s.fx.shake = Math.max(0, s.fx.shake - dt)
 }

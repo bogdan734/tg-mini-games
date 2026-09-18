@@ -15,8 +15,18 @@ export default function ProfileCard() {
     return onProfile(setProfile)
   }, [])
 
-  if (!apiEnabled()) return null
   const u = profile?.user
+  if (!apiEnabled()) {
+    return (
+      <div className="profile">
+        <div className="profile-avatar"><span>👤</span></div>
+        <div className="profile-body">
+          <b>Гость</b>
+          <span className="profile-offline">Открой через Telegram — появятся профиль, монеты и рейтинг</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
