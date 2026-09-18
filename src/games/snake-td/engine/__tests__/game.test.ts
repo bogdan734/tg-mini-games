@@ -127,6 +127,7 @@ describe('waves', () => {
     startWave(s)
     const gold = s.gold
     for (let t = 0; t < 120 && s.phase === 'wave'; t += 1 / 30) tick(s, 1 / 30)
+    expect(s.fx.sounds).toContain('kill')
     expect(s.wave).toBe(2)
     expect(s.phase).toBe('event')
     expect(s.gold).toBeGreaterThan(gold)
@@ -169,5 +170,49 @@ describe('sellUnit', () => {
     expect(sellUnit(s, u.id)).toBe(true)
     expect(s.gold).toBe(START_GOLD + 21)
     expect(s.units).toHaveLength(0)
+  })
+})
+
+describe('bosses', () => {
+  it('wave 3 head regenerates, wave 10 is the king with extra HP', () => {
+    const s = createGame(1)
+    s.wave = 3
+    startWave(s)
+    expect(s.boss.kind).toBe('regen')
+    const head = s.snake[0]
+    head.hp = head.maxHp / 2
+    tick(s, 1)
+    expect(head.hp).toBeGreaterThan(head.maxHp / 2)
+    const k = createGame(1)
+    k.wave = 10
+    startWave(k)
+    expect(k.boss.kind).toBe('king')
+    const plain = createGame(1)
+    plain.wave = 10
+    plain.boss.kind = 'none'
+    expect(k.snake[0].maxHp).toBe(Math.round(30 * Math.pow(1.4, 10) * 1.3))
+  })
+
+  it('shield absorbs damage on the head', () => {
+    const s = createGame(1)
+    s.wave = 9
+    startWave(s)
+    expect(s.boss.kind).toBe('shield')
+    for (let i = 0; i < 16; i++) put(s, 'shadow', i, 3)
+    for (let t = 0; t < 3.5; t += 1 / 30) tick(s, 1 / 30)
+    expect(s.fx.sounds).toContain('shield')
+  })
+
+  it('endless level never reaches won', () => {
+    const s = createGame(4)
+    for (let i = 0; i < 16; i++) put(s, 'shadow', i, 6)
+    for (let w = 0; w < 12; w++) {
+      if (s.phase === 'event') resolveEvent(s)
+      startWave(s)
+      for (let t = 0; t < 120 && s.phase === 'wave'; t += 1 / 20) tick(s, 1 / 20)
+      if (s.phase === 'evolution') chooseEvolution(s, 'safe')
+    }
+    expect(s.phase).not.toBe('won')
+    expect(s.wave).toBeGreaterThan(10)
   })
 })

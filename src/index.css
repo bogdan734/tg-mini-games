@@ -7,8 +7,9 @@
   --accent-text: var(--tg-theme-button-text-color, #ffffff);
   --link: var(--tg-theme-link-color, #7aa2ff);
   --radius: 16px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Telegram fullscreen (Bot API 8.0) exposes its own insets; fall back to the browser's */
+  --safe-top: calc(var(--tg-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--tg-content-safe-area-inset-top, 0px));
+  --safe-bottom: var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }

@@ -20,28 +20,36 @@ export function pointAt(p: Path, d: number): Vec & { angle: number } {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, angle: Math.atan2(b.y - a.y, b.x - a.x) }
 }
 
-function arc(cx: number, cy: number, r: number, a0: number, a1: number, n = 6): Vec[] {
-  const out: Vec[] = []
-  for (let k = 0; k <= n; k++) {
-    const a = a0 + (a1 - a0) * (k / n)
-    out.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r })
+/**
+ * Polyline through `corners` with every interior vertex rounded (quadratic bezier, radius-ish `r`).
+ * First and last points are the open ends of the route.
+ */
+export function roundedRoute(corners: Vec[], r = 40): Path {
+  const pts: Vec[] = [corners[0]]
+  for (let i = 1; i < corners.length - 1; i++) {
+    const P = corners[i - 1], V = corners[i], N = corners[i + 1]
+    const la = Math.hypot(P.x - V.x, P.y - V.y), lb = Math.hypot(N.x - V.x, N.y - V.y)
+    const t = Math.min(r, la / 2, lb / 2)
+    const a = { x: V.x + ((P.x - V.x) / la) * t, y: V.y + ((P.y - V.y) / la) * t }
+    const b = { x: V.x + ((N.x - V.x) / lb) * t, y: V.y + ((N.y - V.y) / lb) * t }
+    for (let k = 0; k <= 6; k++) {
+      const u = k / 6, w = 1 - u
+      pts.push({ x: w * w * a.x + 2 * w * u * V.x + u * u * b.x, y: w * w * a.y + 2 * w * u * V.y + u * u * b.y })
+    }
   }
-  return out
+  pts.push(corners[corners.length - 1])
+  return makePath(pts)
 }
 
-/**
- * Ring road with rounded corners: spawn (top-right) → left along the top → down the left side
- * → right along the bottom → up the right side → gate just below the spawn.
- * `gateGap` is the vertical distance between spawn and gate.
- */
-export function boardPath(w: number, h: number, m: number, r = 40, gateGap = 70): Path {
-  const pts: Vec[] = [{ x: w - m, y: m }]
-  pts.push({ x: m + r, y: m })
-  pts.push(...arc(m + r, m + r, r, -Math.PI / 2, -Math.PI))
-  pts.push({ x: m, y: h - m - r })
-  pts.push(...arc(m + r, h - m - r, r, Math.PI, Math.PI / 2))
-  pts.push({ x: w - m - r, y: h - m })
-  pts.push(...arc(w - m - r, h - m - r, r, Math.PI / 2, 0))
-  pts.push({ x: w - m, y: m + gateGap })
-  return makePath(pts)
+/** Distance from a point to the nearest point of the polyline. */
+export function distanceToPath(p: Path, q: Vec): number {
+  let best = Infinity
+  for (let i = 1; i < p.pts.length; i++) {
+    const a = p.pts[i - 1], b = p.pts[i]
+    const dx = b.x - a.x, dy = b.y - a.y
+    const len2 = dx * dx + dy * dy || 1
+    const t = Math.max(0, Math.min(1, ((q.x - a.x) * dx + (q.y - a.y) * dy) / len2))
+    best = Math.min(best, Math.hypot(q.x - (a.x + dx * t), q.y - (a.y + dy * t)))
+  }
+  return best
 }

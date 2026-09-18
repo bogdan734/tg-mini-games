@@ -1,22 +1,23 @@
+import { DASH_MUL } from './boss'
+import { getLevel } from './levels'
 import type { GameState, Segment } from './types'
-import { PATH } from './layout'
 
 export const SPACING = 30
 export const BASE_SPEED = 40
 
-export function waveLength(wave: number): number { return 10 + wave * 4 }
-export function waveSpeed(wave: number): number { return BASE_SPEED + wave * 5 }
+export function waveLength(wave: number): number { return Math.min(60, 10 + wave * 4) }
+export function waveSpeed(wave: number): number { return BASE_SPEED + Math.min(12, wave) * 5 }
 
-export function makeSnake(wave: number, nextId: number): Segment[] {
+export function makeSnake(wave: number, nextId: number, hpMul = 1, headMul = 1): Segment[] {
   const n = waveLength(wave)
   const out: Segment[] = []
   for (let i = 0; i < n; i++) {
     const head = i === 0
     // HP grows toward the tail, like the reference: cheap front, tanky back.
     // Exponential per-wave growth so merged/evolved units are required later on.
-    const body = Math.round((4 + wave * 3) * Math.pow(1.2, wave) * (0.6 + 0.8 * (i / n)))
-    const hp = head ? Math.round(30 * Math.pow(1.4, wave)) : body
-    out.push({ id: nextId + i, hp, maxHp: hp, head, poison: 0, poisonDps: 0, slow: 0 })
+    const body = Math.round((4 + wave * 3) * Math.pow(1.18, wave) * (0.6 + 0.8 * (i / n)) * hpMul)
+    const hp = head ? Math.round(30 * Math.pow(1.4, wave) * hpMul * headMul) : body
+    out.push({ id: nextId + i, hp, maxHp: hp, head, poison: 0, poisonDps: 0, slow: 0, hitT: 0 })
   }
   return out
 }
@@ -28,7 +29,8 @@ export function segmentD(s: GameState, i: number): number {
 
 /** Position on the ring for drawing/targeting: raw distance wrapped onto the path. */
 export function segmentPos(s: GameState, i: number): number {
-  return ((segmentD(s, i) % PATH.length) + PATH.length) % PATH.length
+  const L = getLevel(s.level).path.length
+  return ((segmentD(s, i) % L) + L) % L
 }
 
 export const HEAD_PASS_COST = 3
@@ -41,14 +43,18 @@ export const BODY_PASS_COST = 1
  */
 export function advanceSnake(s: GameState, dt: number): number {
   if (s.snake.length === 0) return 0
+  const lvl = getLevel(s.level)
+  const L = lvl.path.length
   const first = s.snake[0]
   const slowMul = first.slow > 0 ? 0.55 : 1
+  const dashMul = s.boss.dashT > 0 && first.head ? DASH_MUL : 1
   // headD can dip below zero after leader deaths (index shift); a pass only counts from d >= 0
-  const before = Math.floor(Math.max(0, s.headD) / PATH.length)
-  s.headD += waveSpeed(s.wave) * s.speedMul * slowMul * dt
-  const after = Math.floor(Math.max(0, s.headD) / PATH.length)
+  const before = Math.floor(Math.max(0, s.headD) / L)
+  s.headD += waveSpeed(s.wave) * lvl.speedMul * s.speedMul * slowMul * dashMul * dt
+  const after = Math.floor(Math.max(0, s.headD) / L)
   for (const seg of s.snake) {
     if (seg.slow > 0) seg.slow -= dt
+    if (seg.hitT > 0) seg.hitT -= dt
   }
   const passes = Math.max(0, after - before)
   if (passes > 0) s.lives = Math.max(0, s.lives - passes * (first.head ? HEAD_PASS_COST : BODY_PASS_COST))
@@ -66,7 +72,6 @@ export function removeDead(s: GameState): Segment[] {
       if (i === 0) s.headD -= SPACING
     } else alive.push(seg)
   }
-  // when a middle segment dies the ones behind shift forward by SPACING (index shift) — desired
   s.snake = alive
   return dead
 }

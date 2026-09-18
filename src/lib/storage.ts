@@ -2,29 +2,47 @@ import WebApp from '@twa-dev/sdk'
 import { versionAtLeast } from './telegram'
 
 /**
- * Best-score storage: Telegram CloudStorage (synced across devices) when available,
- * localStorage otherwise (browser dev / old clients).
+ * Key/value storage: Telegram CloudStorage (synced across devices) when available,
+ * localStorage otherwise (browser dev / old clients). Values are strings.
  */
 const cloudAvailable = (): boolean => versionAtLeast('6.9')
 
-const key = (gameId: string) => `best:${gameId}`
+const local = {
+  get: (k: string): string | null => { try { return localStorage.getItem(k) } catch { return null } },
+  set: (k: string, v: string): void => { try { localStorage.setItem(k, v) } catch { /* ignore */ } },
+}
 
-export function getBest(gameId: string): Promise<number> {
-  const k = key(gameId)
-  if (!cloudAvailable()) return Promise.resolve(Number(localStorage.getItem(k) ?? 0))
+export function getValue(key: string): Promise<string | null> {
+  if (!cloudAvailable()) return Promise.resolve(local.get(key))
   return new Promise((resolve) => {
-    WebApp.CloudStorage.getItem(k, (err, value) => {
-      if (err) resolve(Number(localStorage.getItem(k) ?? 0))
-      else resolve(Number(value ?? 0))
-    })
+    try {
+      WebApp.CloudStorage.getItem(key, (err, value) => {
+        if (err || value === undefined || value === '') resolve(local.get(key))
+        else resolve(value)
+      })
+    } catch {
+      resolve(local.get(key))
+    }
   })
+}
+
+export function setValue(key: string, value: string): Promise<void> {
+  local.set(key, value)
+  if (!cloudAvailable()) return Promise.resolve()
+  return new Promise((resolve) => {
+    try { WebApp.CloudStorage.setItem(key, value, () => resolve()) } catch { resolve() }
+  })
+}
+
+const bestKey = (gameId: string) => `best:${gameId}`
+
+export async function getBest(gameId: string): Promise<number> {
+  return Number((await getValue(bestKey(gameId))) ?? 0)
 }
 
 export async function setBest(gameId: string, score: number): Promise<boolean> {
   const prev = await getBest(gameId)
   if (score <= prev) return false
-  const k = key(gameId)
-  localStorage.setItem(k, String(score))
-  if (cloudAvailable()) WebApp.CloudStorage.setItem(k, String(score))
+  await setValue(bestKey(gameId), String(score))
   return true
 }

@@ -14,15 +14,40 @@ export function versionAtLeast(min: string): boolean {
   return true
 }
 
+export const BOT_USERNAME = 'ADS_gamesBoT'
+
+/** Bot API 8.0 methods that the SDK typings may not know about yet. */
+type Modern = {
+  requestFullscreen?: () => void
+  lockOrientation?: () => void
+  isFullscreen?: boolean
+}
+
 export function initTelegram(): void {
   try {
     WebApp.ready()
     WebApp.expand()
     if (versionAtLeast('7.7')) WebApp.disableVerticalSwipes()
     if (versionAtLeast('6.1')) WebApp.setHeaderColor('secondary_bg_color')
+    if (isTelegram && versionAtLeast('8.0')) {
+      const m = WebApp as unknown as Modern
+      m.requestFullscreen?.()
+      m.lockOrientation?.()
+    }
   } catch {
     /* outside Telegram: nothing to do */
   }
+}
+
+/** Share a text with friends via Telegram's share sheet (falls back to Web Share / clipboard). */
+export function shareText(text: string): void {
+  const url = `https://t.me/${BOT_USERNAME}`
+  if (isTelegram) {
+    WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`)
+    return
+  }
+  if (navigator.share) { void navigator.share({ text: `${text} ${url}` }).catch(() => {}); return }
+  void navigator.clipboard?.writeText(`${text} ${url}`)
 }
 
 export function haptic(kind: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light'): void {

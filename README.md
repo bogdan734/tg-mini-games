@@ -16,7 +16,7 @@ src/
   games/types.ts      GameMeta, GameProps
   games/registry.ts   СПИСОК ИГР — добавлять новые сюда
   games/<id>/         код игры (default export, принимает { onScore })
-  games/snake-td/     Snake Defense: engine/ (чистая логика + тесты), render/ (canvas)
+  games/snake-td/     Snake Defense: engine/ (логика + тесты, levels/boss), render/ (canvas, sfx)
   screens/Hub.tsx     список игр
   screens/GameScreen.tsx  обёртка: заголовок, кнопка назад, запись рекорда
 bot/index.mjs         бот: /start → кнопка Web App, menu button

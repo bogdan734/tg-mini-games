@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createGame } from '../game'
-import { PATH } from '../layout'
+import { getLevel } from '../levels'
 import { advanceSnake, makeSnake, removeDead, segmentPos, SPACING, waveSpeed } from '../snake'
+
+const PATH = getLevel(1).path
 
 describe('makeSnake', () => {
   it('builds head-first with tankier tail', () => {

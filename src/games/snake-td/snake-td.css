@@ -48,3 +48,18 @@
 .std-card.risky { border-color: #ff4d6d; }
 .std-card:active { transform: scale(0.97); }
 .std-event-icon { font-size: 56px; line-height: 1; }
+.std-menu { justify-content: flex-start; padding-top: 40px; overflow-y: auto; }
+.std-levels { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.std-level {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px; border: 0; border-radius: 16px;
+  background: #262b3d; color: var(--text); text-align: left; cursor: pointer;
+}
+.std-level[disabled] { opacity: .5; cursor: default; }
+.std-level:active:not([disabled]) { transform: scale(.98); }
+.std-level-icon { font-size: 32px; width: 44px; text-align: center; }
+.std-level-body { display: flex; flex-direction: column; gap: 2px; }
+.std-level-body b { font-size: 16px; }
+.std-level-body small { color: var(--hint); font-size: 12px; }
+.std-level-body em { font-style: normal; color: var(--link); font-size: 12px; }
+.std-row { display: flex; gap: 10px; }

@@ -1,5 +1,7 @@
-import { MAX_WAVE, sellValue, unitAt } from '../engine/game'
-import { BOARD_H, BOARD_W, GATE, PATH, PATH_WIDTH, SLOTS, SLOT_R, SPAWN } from '../engine/layout'
+import { BOSS_INFO } from '../engine/boss'
+import { maxWave, sellValue, unitAt } from '../engine/game'
+import { BOARD_H, BOARD_W, PATH_WIDTH, SLOT_R } from '../engine/layout'
+import { getLevel, type LevelDef } from '../engine/levels'
 import { pointAt } from '../engine/path'
 import { segmentD, segmentPos } from '../engine/snake'
 import type { GameState, Unit, UnitType, Vec } from '../engine/types'
@@ -23,69 +25,77 @@ export interface DragState {
   y: number
   moved: boolean
 }
-export interface ViewState { drag: DragState | null; selected: number | null; toast: { text: string; t: number } | null }
+export interface ViewState {
+  drag: DragState | null
+  selected: number | null
+  toast: { text: string; t: number } | null
+  muted: boolean
+}
 
 export const inRect = (r: Rect, x: number, y: number) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h
 export const shopCardRect = (i: number): Rect => ({ x: 10 + i * 94, y: SHOP_Y + 14, w: 86, h: 122 })
-export const waveButtonRect = (): Rect => ({ x: W - 122, y: 7, w: 114, h: 34 })
+export const waveButtonRect = (): Rect => ({ x: 222, y: 7, w: 106, h: 34 })
+export const muteRect = (): Rect => ({ x: W - 50, y: 7, w: 42, h: 34 })
 export const sellZoneRect = (): Rect => ({ x: 10, y: SHOP_Y + 14, w: W - 20, h: 122 })
 
 /** Slot index under a point given in canvas coords, or null. */
-export function slotAt(x: number, y: number): number | null {
+export function slotAt(x: number, y: number, slots: Vec[]): number | null {
   const by = y - HUD_H
-  for (let i = 0; i < SLOTS.length; i++) {
-    const s = SLOTS[i]
+  for (let i = 0; i < slots.length; i++) {
+    const s = slots[i]
     if (Math.hypot(s.x - x, s.y - by) <= SLOT_R + 10) return i
   }
   return null
 }
 
-let fieldCache: HTMLCanvasElement | null = null
-function fieldLayer(): HTMLCanvasElement {
-  if (fieldCache) return fieldCache
+const fieldCache = new Map<number, HTMLCanvasElement>()
+function fieldLayer(lvl: LevelDef): HTMLCanvasElement {
+  const cached = fieldCache.get(lvl.id)
+  if (cached) return cached
   const c = document.createElement('canvas')
   c.width = BOARD_W
   c.height = BOARD_H
   const g = c.getContext('2d')!
+  const pal = lvl.palette
   const grad = g.createLinearGradient(0, 0, 0, BOARD_H)
-  grad.addColorStop(0, '#3f9a4d')
-  grad.addColorStop(1, '#2f7a3d')
+  grad.addColorStop(0, pal.bg1)
+  grad.addColorStop(1, pal.bg2)
   g.fillStyle = grad
   g.fillRect(0, 0, BOARD_W, BOARD_H)
-  // grass tufts
-  g.strokeStyle = 'rgba(255,255,255,0.10)'
+  g.strokeStyle = pal.tuft
   g.lineWidth = 2
-  let seed = 7
+  let seed = 7 + lvl.id
   const r = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280 }
   for (let i = 0; i < 160; i++) {
     const x = r() * BOARD_W, y = r() * BOARD_H
     g.beginPath(); g.moveTo(x, y); g.lineTo(x - 3, y - 7); g.moveTo(x, y); g.lineTo(x + 3, y - 6); g.stroke()
   }
-  // road
   g.lineCap = 'round'; g.lineJoin = 'round'
-  const road = () => { g.beginPath(); g.moveTo(PATH.pts[0].x, PATH.pts[0].y); for (const p of PATH.pts) g.lineTo(p.x, p.y); g.stroke() }
-  const link = () => { g.beginPath(); g.moveTo(GATE.x, GATE.y); g.lineTo(SPAWN.x, SPAWN.y); g.stroke() }
-  g.strokeStyle = '#8a6b3e'; g.lineWidth = PATH_WIDTH + 8; road(); link()
-  g.strokeStyle = '#d9b877'; g.lineWidth = PATH_WIDTH; road(); link()
-  g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2; g.setLineDash([6, 10]); road(); g.setLineDash([])
+  const P = lvl.path
+  const road = () => { g.beginPath(); g.moveTo(P.pts[0].x, P.pts[0].y); for (const p of P.pts) g.lineTo(p.x, p.y); g.stroke() }
+  const link = () => { g.beginPath(); g.moveTo(lvl.gate.x, lvl.gate.y); g.lineTo(lvl.spawn.x, lvl.spawn.y); g.stroke() }
+  g.strokeStyle = pal.roadEdge; g.lineWidth = PATH_WIDTH + 8; road(); link()
+  g.strokeStyle = pal.road; g.lineWidth = PATH_WIDTH; road(); link()
+  g.strokeStyle = pal.dash; g.lineWidth = 2; g.setLineDash([6, 10]); road(); g.setLineDash([])
   // spawn portal
-  g.fillStyle = '#2b1e3f'; g.beginPath(); g.arc(SPAWN.x, SPAWN.y, 22, 0, Math.PI * 2); g.fill()
-  g.strokeStyle = '#a56cff'; g.lineWidth = 4; g.beginPath(); g.arc(SPAWN.x, SPAWN.y, 16, 0, Math.PI * 2); g.stroke()
-  g.strokeStyle = '#d9b3ff'; g.lineWidth = 2; g.beginPath(); g.arc(SPAWN.x, SPAWN.y, 9, 0, Math.PI * 1.5); g.stroke()
+  const S = lvl.spawn
+  g.fillStyle = '#2b1e3f'; g.beginPath(); g.arc(S.x, S.y, 22, 0, Math.PI * 2); g.fill()
+  g.strokeStyle = '#a56cff'; g.lineWidth = 4; g.beginPath(); g.arc(S.x, S.y, 16, 0, Math.PI * 2); g.stroke()
+  g.strokeStyle = '#d9b3ff'; g.lineWidth = 2; g.beginPath(); g.arc(S.x, S.y, 9, 0, Math.PI * 1.5); g.stroke()
   // gate: a portcullis across the road, snake enters it going up
-  g.fillStyle = '#1f7a3a'; g.fillRect(GATE.x - 26, GATE.y - 16, 52, 30)
-  g.fillStyle = '#39c26a'; g.fillRect(GATE.x - 22, GATE.y - 12, 44, 22)
+  const G = lvl.gate
+  g.fillStyle = '#1f7a3a'; g.fillRect(G.x - 26, G.y - 16, 52, 30)
+  g.fillStyle = '#39c26a'; g.fillRect(G.x - 22, G.y - 12, 44, 22)
   g.fillStyle = '#1f7a3a'
-  for (let i = 0; i < 5; i++) g.fillRect(GATE.x - 20 + i * 10, GATE.y - 12, 3, 22)
+  for (let i = 0; i < 5; i++) g.fillRect(G.x - 20 + i * 10, G.y - 12, 3, 22)
   g.fillStyle = '#ffd54a'; g.font = `700 12px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'
-  g.fillText('БАЗА', GATE.x, GATE.y - 24)
-  // slots
-  for (const s of SLOTS) {
+  g.fillText('БАЗА', G.x, G.y - 24)
+  for (const s of lvl.slots) {
     g.fillStyle = 'rgba(0,0,0,0.18)'; g.beginPath(); g.arc(s.x, s.y + 2, SLOT_R, 0, Math.PI * 2); g.fill()
     g.fillStyle = 'rgba(0,0,0,0.22)'; g.beginPath(); g.arc(s.x, s.y, SLOT_R, 0, Math.PI * 2); g.fill()
     g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 2; g.setLineDash([4, 5]); g.beginPath(); g.arc(s.x, s.y, SLOT_R - 3, 0, Math.PI * 2); g.stroke(); g.setLineDash([])
   }
-  fieldCache = c
+  fieldCache.set(lvl.id, c)
   return c
 }
 
@@ -118,25 +128,33 @@ function drawLevelBadge(ctx: CanvasRenderingContext2D, u: Unit, x: number, y: nu
   text(ctx, String(u.level), x, y + 1, 13, '#fff', 'center', false)
 }
 
-function drawSnake(ctx: CanvasRenderingContext2D, s: GameState, time: number) {
+function drawSnake(ctx: CanvasRenderingContext2D, s: GameState, lvl: LevelDef, time: number) {
   for (let i = s.snake.length - 1; i >= 0; i--) {
     const seg = s.snake[i]
     if (segmentD(s, i) < -5) continue
-    const p = pointAt(PATH, segmentPos(s, i))
-    const r = seg.head ? 21 : 14
+    const p = pointAt(lvl.path, segmentPos(s, i))
+    const flash = Math.max(0, seg.hitT) / 0.15
+    const r = (seg.head ? 21 : 14) * (1 + 0.12 * flash)
     const hpRatio = Math.max(0, seg.hp) / seg.maxHp
-    // shadow
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.arc(p.x + 2, p.y + 4, r, 0, Math.PI * 2); ctx.fill()
     const grad = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.2, p.x, p.y, r)
     if (seg.poison > 0) { grad.addColorStop(0, '#b6f2c9'); grad.addColorStop(1, '#3d9a5c') }
     else if (seg.slow > 0) { grad.addColorStop(0, '#dbeeff'); grad.addColorStop(1, '#5aa0e0') }
-    else if (seg.head) { grad.addColorStop(0, '#c9d2e3'); grad.addColorStop(1, '#6b7590') }
+    else if (seg.head) { grad.addColorStop(0, s.boss.kind === 'king' ? '#ffd9a8' : '#c9d2e3'); grad.addColorStop(1, s.boss.kind === 'king' ? '#b0642a' : s.boss.kind !== 'none' ? '#7a3f8f' : '#6b7590') }
     else { grad.addColorStop(0, '#d8dfeb'); grad.addColorStop(1, `hsl(220, 20%, ${40 + hpRatio * 25}%)`) }
     ctx.fillStyle = grad
     ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill()
     ctx.strokeStyle = '#3a4258'; ctx.lineWidth = 2.5; ctx.stroke()
+    if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${0.6 * flash})`; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill() }
     if (seg.head) {
-      // eyes and fangs facing along the path
+      if (s.boss.shield > 0) {
+        ctx.strokeStyle = 'rgba(120,180,255,0.9)'; ctx.lineWidth = 3
+        ctx.beginPath(); ctx.arc(p.x, p.y, r + 6, 0, Math.PI * 2); ctx.stroke()
+      }
+      if (s.boss.dashT > 0) {
+        ctx.strokeStyle = 'rgba(255,200,80,0.7)'; ctx.lineWidth = 4
+        ctx.beginPath(); ctx.arc(p.x, p.y, r + 4, 0, Math.PI * 2); ctx.stroke()
+      }
       const a = p.angle
       const ex = Math.cos(a), ey = Math.sin(a)
       const nx = -ey, ny = ex
@@ -151,11 +169,70 @@ function drawSnake(ctx: CanvasRenderingContext2D, s: GameState, time: number) {
         ctx.beginPath(); ctx.moveTo(bx - nx * 3 * side, by - ny * 3 * side); ctx.lineTo(bx + ex * 8, by + ey * 8); ctx.lineTo(bx + nx * 3 * side, by + ny * 3 * side); ctx.fill()
       }
       const bob = Math.sin(time * 6) * 1.5
+      const info = BOSS_INFO[s.boss.kind]
+      if (info.name) text(ctx, info.name, p.x, p.y - r - 26 + bob, 12, '#ffd54a')
       text(ctx, String(Math.ceil(seg.hp)), p.x, p.y - r - 12 + bob, 15, '#fff')
     } else {
       text(ctx, String(Math.ceil(seg.hp)), p.x, p.y + 1, 13, '#fff')
     }
   }
+}
+
+function drawShots(ctx: CanvasRenderingContext2D, s: GameState) {
+  for (const sh of s.fx.shots) {
+    const k = Math.min(1, sh.t / 0.12)
+    const x = sh.x + (sh.tx - sh.x) * k, y = sh.y - 20 + (sh.ty - sh.y + 20) * k
+    const ang = Math.atan2(sh.ty - sh.y, sh.tx - sh.x)
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(ang)
+    switch (sh.type) {
+      case 'frost':
+        ctx.strokeStyle = '#dff4ff'; ctx.lineWidth = 2
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.stroke(); ctx.rotate(Math.PI / 3) }
+        ctx.fillStyle = '#7fd4ff'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill()
+        break
+      case 'blaze':
+        ctx.fillStyle = 'rgba(255,120,40,0.5)'; ctx.beginPath(); ctx.ellipse(-8, 0, 12, 5, 0, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#ff7a2f'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#ffe08a'; ctx.beginPath(); ctx.arc(1, 0, 3, 0, Math.PI * 2); ctx.fill()
+        break
+      case 'venom':
+        ctx.fillStyle = '#4de08a'; ctx.beginPath(); ctx.ellipse(0, 0, 7, 4, 0, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#b9ffd6'; ctx.beginPath(); ctx.arc(2, -1, 1.6, 0, Math.PI * 2); ctx.fill()
+        break
+      case 'shadow':
+        ctx.fillStyle = 'rgba(80,60,140,0.6)'; ctx.beginPath(); ctx.ellipse(-6, 0, 14, 4, 0, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#8d7bff'; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-4, -4); ctx.lineTo(-1, 0); ctx.lineTo(-4, 4); ctx.fill()
+        break
+      case 'volt':
+        break
+    }
+    ctx.restore()
+  }
+  for (const b of s.fx.beams) {
+    ctx.globalAlpha = Math.min(1, b.t / 0.12)
+    ctx.strokeStyle = b.color; ctx.lineWidth = 2.5; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(b.from.x, b.from.y - 20)
+    const n = 5
+    for (let i = 1; i <= n; i++) {
+      const k = i / n
+      const jitter = i === n ? 0 : (i % 2 ? 7 : -7)
+      const dx = b.to.x - b.from.x, dy = b.to.y - (b.from.y - 20)
+      ctx.lineTo(b.from.x + dx * k + (-dy / Math.hypot(dx, dy)) * jitter, b.from.y - 20 + dy * k + (dx / Math.hypot(dx, dy)) * jitter)
+    }
+    ctx.stroke()
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawParticles(ctx: CanvasRenderingContext2D, s: GameState) {
+  for (const p of s.fx.parts) {
+    ctx.globalAlpha = Math.min(1, p.t / 0.3)
+    ctx.fillStyle = p.color
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill()
+  }
+  ctx.globalAlpha = 1
 }
 
 function drawShop(ctx: CanvasRenderingContext2D, s: GameState, sprites: Sprites, view: ViewState) {
@@ -193,68 +270,67 @@ function drawShop(ctx: CanvasRenderingContext2D, s: GameState, sprites: Sprites,
   text(ctx, `${s.rerollCost} 💰`, rr.x + rr.w / 2, rr.y + 106, 14, s.gold >= s.rerollCost ? '#ffd54a' : '#7a7f99', 'center', false)
 }
 
-function drawHud(ctx: CanvasRenderingContext2D, s: GameState) {
+function drawHud(ctx: CanvasRenderingContext2D, s: GameState, view: ViewState) {
   ctx.fillStyle = '#1b1e2b'
   ctx.fillRect(0, 0, W, HUD_H)
-  text(ctx, `❤️ ${s.lives}`, 14, HUD_H / 2, 18, '#fff', 'left', false)
-  text(ctx, `💰 ${s.gold}`, 96, HUD_H / 2, 18, '#ffd54a', 'left', false)
-  text(ctx, `Волна ${Math.min(s.wave, MAX_WAVE)}/${MAX_WAVE}`, 186, HUD_H / 2, 15, '#aab0cc', 'left', false)
+  text(ctx, `❤️ ${s.lives}`, 12, HUD_H / 2, 17, '#fff', 'left', false)
+  text(ctx, `💰 ${s.gold}`, 82, HUD_H / 2, 17, '#ffd54a', 'left', false)
+  const mw = maxWave(s)
+  text(ctx, mw === Infinity ? `Волна ${s.wave}` : `Волна ${Math.min(s.wave, mw)}/${mw}`, 158, HUD_H / 2, 14, '#aab0cc', 'left', false)
   if (s.phase === 'ready') {
     const r = waveButtonRect()
     ctx.fillStyle = '#39c26a'; roundRect(ctx, r, 12); ctx.fill()
-    text(ctx, `▶ Волна ${s.wave}`, r.x + r.w / 2, r.y + r.h / 2 + 1, 16, '#0b2b14', 'center', false)
+    text(ctx, `▶ Волна ${s.wave}`, r.x + r.w / 2, r.y + r.h / 2 + 1, 15, '#0b2b14', 'center', false)
   }
+  const m = muteRect()
+  ctx.fillStyle = '#262b3d'; roundRect(ctx, m, 10); ctx.fill()
+  text(ctx, view.muted ? '🔇' : '🔊', m.x + m.w / 2, m.y + m.h / 2 + 1, 18, '#fff', 'center', false)
 }
 
 export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, sprites: Sprites, view: ViewState, time: number) {
+  const lvl = getLevel(s.level)
   ctx.clearRect(0, 0, W, H)
-  drawHud(ctx, s)
+  drawHud(ctx, s, view)
   ctx.save()
-  ctx.translate(0, HUD_H)
-  ctx.drawImage(fieldLayer(), 0, 0)
+  const shake = s.fx.shake > 0 ? (s.fx.shake / 0.4) * 5 : 0
+  ctx.translate(shake ? (Math.random() - 0.5) * shake * 2 : 0, HUD_H + (shake ? (Math.random() - 0.5) * shake * 2 : 0))
+  ctx.drawImage(fieldLayer(lvl), 0, 0)
 
   const drag = view.drag
   const dragUnit = drag?.kind === 'unit' ? s.units.find((u) => u.id === drag.unitId) : undefined
-  // slot highlights while dragging
   if (drag) {
-    for (let i = 0; i < SLOTS.length; i++) {
+    for (let i = 0; i < lvl.slots.length; i++) {
       const occ = unitAt(s, i)
       let color: string | null = null
       if (!occ) color = drag.kind === 'shop' && s.gold < UNIT_DEFS[drag.type].price ? null : 'rgba(120,255,160,0.35)'
       else if (dragUnit && canMerge(dragUnit, occ)) color = 'rgba(255,215,80,0.5)'
       if (!color) continue
-      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(SLOTS[i].x, SLOTS[i].y, SLOT_R, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(lvl.slots[i].x, lvl.slots[i].y, SLOT_R, 0, Math.PI * 2); ctx.fill()
     }
   }
-  // range for selected / dragged unit (dragged: previewed at the slot under the finger)
   const focus = dragUnit ?? (view.selected !== null ? s.units.find((u) => u.id === view.selected) : undefined)
-  const hoverSlot = drag ? slotAt(drag.x, drag.y) : null
+  const hoverSlot = drag ? slotAt(drag.x, drag.y, lvl.slots) : null
   if (drag && hoverSlot !== null) {
     const ghost: Unit = dragUnit ?? { id: -1, type: drag.type, level: 1, evo: 'none', slot: hoverSlot, cooldown: 0 }
-    const c = SLOTS[hoverSlot]
+    const c = lvl.slots[hoverSlot]
     ctx.fillStyle = `${UNIT_DEFS[ghost.type].color}22`; ctx.strokeStyle = `${UNIT_DEFS[ghost.type].color}88`; ctx.lineWidth = 2
     ctx.beginPath(); ctx.arc(c.x, c.y, unitRange(ghost), 0, Math.PI * 2); ctx.fill(); ctx.stroke()
   } else if (focus) {
-    const c = SLOTS[focus.slot]
+    const c = lvl.slots[focus.slot]
     ctx.fillStyle = `${UNIT_DEFS[focus.type].color}22`; ctx.strokeStyle = `${UNIT_DEFS[focus.type].color}88`; ctx.lineWidth = 2
     ctx.beginPath(); ctx.arc(c.x, c.y, unitRange(focus), 0, Math.PI * 2); ctx.fill(); ctx.stroke()
   }
-  // units
   for (const u of s.units) {
-    const c = SLOTS[u.slot]
+    const c = lvl.slots[u.slot]
     const isDragged = dragUnit?.id === u.id
     const bob = Math.sin(time * 4 + u.id) * 1.5
-    drawUnitSprite(ctx, sprites, u, c.x, c.y - 4 + bob, 58, isDragged ? 0.3 : 1)
+    const recoil = u.cooldown > 0 ? Math.max(0, 1 - (1 / UNIT_DEFS[u.type].rate - u.cooldown) / 0.12) * 3 : 0
+    drawUnitSprite(ctx, sprites, u, c.x, c.y - 4 + bob + recoil, 58, isDragged ? 0.3 : 1)
     if (!isDragged) drawLevelBadge(ctx, u, c.x + 18, c.y + 16)
   }
-  // beams
-  for (const b of s.fx.beams) {
-    ctx.globalAlpha = Math.min(1, b.t / 0.15)
-    ctx.strokeStyle = b.color; ctx.lineWidth = 3; ctx.lineCap = 'round'
-    ctx.beginPath(); ctx.moveTo(b.from.x, b.from.y); ctx.lineTo(b.to.x, b.to.y); ctx.stroke()
-    ctx.globalAlpha = 1
-  }
-  drawSnake(ctx, s, time)
+  drawShots(ctx, s)
+  drawSnake(ctx, s, lvl, time)
+  drawParticles(ctx, s)
   for (const p of s.fx.popups) {
     ctx.globalAlpha = Math.min(1, p.t / 0.3)
     text(ctx, p.text, p.x, p.y, 14, p.color)
@@ -262,7 +338,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, sprites: S
   }
   if (focus && !drag) {
     const def = UNIT_DEFS[focus.type]
-    const c: Vec = SLOTS[focus.slot]
+    const c: Vec = lvl.slots[focus.slot]
     const label = `${def.name} ур.${focus.level}  ⚔${unitDamage(focus)}  ${def.desc}`
     ctx.font = `700 12px ${FONT}`
     const tw = ctx.measureText(label).width + 16

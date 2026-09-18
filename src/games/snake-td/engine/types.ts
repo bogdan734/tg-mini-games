@@ -36,17 +36,28 @@ export interface Segment {
   poisonDps: number
   /** seconds of slow left (head only matters) */
   slow: number
+  /** hit flash timer (render) */
+  hitT: number
 }
+
+export type BossKind = 'none' | 'regen' | 'dash' | 'shield' | 'king'
+export interface BossState { kind: BossKind; timer: number; next: number; dashT: number; shield: number }
+
+export interface Shot { x: number; y: number; tx: number; ty: number; t: number; type: UnitType }
+export interface Particle { x: number; y: number; vx: number; vy: number; t: number; color: string; r: number }
+
 
 export interface Popup { x: number; y: number; text: string; t: number; color: string }
 export interface Beam { from: Vec; to: Vec; t: number; color: string }
 
-export type Phase = 'ready' | 'wave' | 'evolution' | 'event' | 'over' | 'won'
+export type Phase = 'menu' | 'ready' | 'wave' | 'evolution' | 'event' | 'over' | 'won'
 export type EventId = 'goldrush' | 'rush' | 'gift' | 'frost'
 
 export interface GameState {
   phase: Phase
+  level: number
   wave: number
+  boss: BossState
   lives: number
   gold: number
   score: number
@@ -63,7 +74,7 @@ export interface GameState {
   pendingEvent: EventId | null
   goldMul: number
   speedMul: number
-  fx: { popups: Popup[]; beams: Beam[] }
+  fx: { popups: Popup[]; beams: Beam[]; shots: Shot[]; parts: Particle[]; sounds: string[]; shake: number }
   time: number
   nextId: number
 }
