@@ -30,7 +30,7 @@ describe('advanceSnake', () => {
     g.headD = PATH.length - 1
     const passes = advanceSnake(g, 0.05)
     expect(passes).toBe(1)
-    expect(g.lives).toBe(7)
+    expect(g.lives).toBe(8)
     expect(g.snake).toHaveLength(14)
     expect(g.snake[0].head).toBe(true)
     expect(segmentPos(g, 0)).toBeCloseTo(waveSpeed(1) * 0.05 - 1)
@@ -53,6 +53,7 @@ describe('removeDead', () => {
     g.snake[3].hp = 0
     const dead = removeDead(g)
     expect(dead).toHaveLength(1)
+    expect(dead[0].index).toBe(3)
     expect(g.snake).toHaveLength(13)
     expect(g.headD).toBe(200)
   })

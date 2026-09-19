@@ -1,33 +1,40 @@
-import type { Evo, Unit, UnitDef, UnitType } from './types'
+import type { Evo, Unit } from './types'
 
-export const UNIT_DEFS: Record<UnitType, UnitDef> = {
-  volt:   { type: 'volt',   name: 'Лучник',     color: '#ffd54a', price: 15, dmg: 1, rate: 3,   range: 150, desc: 'Быстрые стрелы, иногда две' },
-  frost:  { type: 'frost',  name: 'Кузнец',     color: '#5bc8ff', price: 20, dmg: 2, rate: 1.2, range: 130, desc: 'Молот оглушает и замедляет' },
-  blaze:  { type: 'blaze',  name: 'Подрывник',  color: '#ff5a5a', price: 25, dmg: 3, rate: 0.9, range: 140, desc: 'Динамит бьёт по соседям' },
-  venom:  { type: 'venom',  name: 'Факельщик',  color: '#4de08a', price: 25, dmg: 2, rate: 1,   range: 130, desc: 'Поджигает: урон со временем' },
-  shadow: { type: 'shadow', name: 'Рыцарь',     color: '#8d7bff', price: 35, dmg: 7, rate: 0.5, range: 120, desc: 'Тяжёлый удар мечом' },
+export const MAX_LEVEL = 5
+/** Reaching this level opens the evolution choice. */
+export const EVO_LEVEL = 5
+export const SWORD_DMG = 4
+/** attacks per second per sword */
+export const SWORD_RATE = 1.3
+export const BASE_RANGE = 135
+
+export const EVO_MUL: Record<Evo, number> = { none: 1, safe: 2, risky: 3.5 }
+export const EVO_INFO: Record<Exclude<Evo, 'none'>, { name: string; desc: string; color: string }> = {
+  safe: { name: 'Ветеран', desc: 'Урон ×2, 100% успех', color: '#8d5bff' },
+  risky: { name: 'Берсерк', desc: 'Урон ×3.5, 50% успех; провал = уровень 4', color: '#ff4d6d' },
 }
 
-export const UNIT_TYPES = Object.keys(UNIT_DEFS) as UnitType[]
-export const MAX_LEVEL = 6
-export const EVO_LEVEL = 3
+export const makeSwords = (n: number): Unit['swords'] =>
+  Array.from({ length: n }, (_, i) => ({ cooldown: (i / n) * (1 / SWORD_RATE), phase: (i / n) * Math.PI * 2 }))
 
-export const EVO_MUL: Record<Evo, number> = { none: 1, safe: 1.8, risky: 3 }
-
-export function unitDamage(u: Unit): number {
-  return Math.round(UNIT_DEFS[u.type].dmg * Math.pow(1.5, u.level - 1) * EVO_MUL[u.evo] * 10) / 10
+/** Damage of one sword hit. Level adds a little on top of the sword count. */
+export function swordDamage(u: Unit): number {
+  return Math.round(SWORD_DMG * (1 + 0.2 * (u.level - 1)) * EVO_MUL[u.evo] * 10) / 10
 }
+
+/** Rough damage per second of the whole unit (for the codex/tooltips). */
+export const unitDps = (u: Unit): number => Math.round(swordDamage(u) * SWORD_RATE * u.level * 10) / 10
 
 export function unitRange(u: Unit): number {
-  return UNIT_DEFS[u.type].range + (u.level - 1) * 8
+  return BASE_RANGE + (u.level - 1) * 6
 }
 
 export function canMerge(a: Unit, b: Unit): boolean {
-  return a.id !== b.id && a.type === b.type && a.level === b.level && a.evo === b.evo && a.level < MAX_LEVEL
+  return a.id !== b.id && a.level === b.level && a.evo === 'none' && b.evo === 'none' && a.level < MAX_LEVEL
 }
 
-/** Sprite tier for rendering: 1 base, 2 grown, 3 evolved. */
+/** Render tier: 1 recruit, 2 seasoned, 3 evolved. */
 export function unitTier(u: Unit): 1 | 2 | 3 {
   if (u.evo !== 'none') return 3
-  return u.level >= 2 ? 2 : 1
+  return u.level >= 3 ? 2 : 1
 }

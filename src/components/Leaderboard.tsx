@@ -4,8 +4,8 @@ import { haptic } from '../lib/telegram'
 
 const BOARDS = [
   { key: 'all', game: 'all', level: 0, name: 'Общий' },
-  { key: 's1', game: 'snake-td', level: 1, name: '🐍 Луг' }, { key: 's2', game: 'snake-td', level: 2, name: '🐍 Пустыня' },
-  { key: 's3', game: 'snake-td', level: 3, name: '🐍 Снега' }, { key: 's4', game: 'snake-td', level: 4, name: '🐍 ∞' },
+  { key: 's1', game: 'snake-td', level: 1, name: '🐍 Излучина' }, { key: 's2', game: 'snake-td', level: 2, name: '🐍 Серпантин' },
+  { key: 's3', game: 'snake-td', level: 3, name: '🐍 Часы' }, { key: 's4', game: 'snake-td', level: 4, name: '🐍 ∞' },
   { key: 'm1', game: 'merge-td', level: 1, name: '🏰 Merge' },
 ]
 

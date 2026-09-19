@@ -13,11 +13,10 @@ export function makeSnake(wave: number, nextId: number, hpMul = 1, headMul = 1):
   const out: Segment[] = []
   for (let i = 0; i < n; i++) {
     const head = i === 0
-    // HP grows toward the tail, like the reference: cheap front, tanky back.
-    // Exponential per-wave growth so merged/evolved units are required later on.
-    const body = Math.round((4 + wave * 3) * Math.pow(1.18, wave) * (0.6 + 0.8 * (i / n)) * hpMul)
-    const hp = head ? Math.round(30 * Math.pow(1.4, wave) * hpMul * headMul) : body
-    out.push({ id: nextId + i, hp, maxHp: hp, head, poison: 0, poisonDps: 0, slow: 0, hitT: 0 })
+    // HP grows toward the tail: cheap front, tanky back. Exponential per-wave growth.
+    const body = Math.round((4 + wave * 3) * Math.pow(1.23, wave) * (0.6 + 0.8 * (i / n)) * hpMul)
+    const hp = head ? Math.round(30 * Math.pow(1.42, wave) * hpMul * headMul) : body
+    out.push({ id: nextId + i, hp, maxHp: hp, head, slow: 0, hitT: 0 })
   }
   return out
 }
@@ -33,11 +32,11 @@ export function segmentPos(s: GameState, i: number): number {
   return ((segmentD(s, i) % L) + L) % L
 }
 
-export const HEAD_PASS_COST = 3
+export const HEAD_PASS_COST = 2
 export const BODY_PASS_COST = 1
 
 /**
- * Advance the snake around the ring. Segments never leave the board; every time the
+ * Advance the worm around the ring. Segments never leave the board; every time the
  * leading segment passes the base gate the player loses lives (head costs more).
  * Returns the number of gate passes this tick.
  */
@@ -48,7 +47,6 @@ export function advanceSnake(s: GameState, dt: number): number {
   const first = s.snake[0]
   const slowMul = first.slow > 0 ? 0.55 : 1
   const dashMul = s.boss.dashT > 0 && first.head ? DASH_MUL : 1
-  // headD can dip below zero after leader deaths (index shift); a pass only counts from d >= 0
   const before = Math.floor(Math.max(0, s.headD) / L)
   s.headD += waveSpeed(s.wave) * lvl.speedMul * s.speedMul * slowMul * dashMul * dt
   const after = Math.floor(Math.max(0, s.headD) / L)
@@ -61,14 +59,14 @@ export function advanceSnake(s: GameState, dt: number): number {
   return passes
 }
 
-/** Remove dead segments; those behind close the gap. Returns killed segments. */
-export function removeDead(s: GameState): Segment[] {
-  const dead: Segment[] = []
+/** Remove dead segments; those behind close the gap. Returns killed segments with their index. */
+export function removeDead(s: GameState): { seg: Segment; index: number }[] {
+  const dead: { seg: Segment; index: number }[] = []
   const alive: Segment[] = []
   for (let i = 0; i < s.snake.length; i++) {
     const seg = s.snake[i]
     if (seg.hp <= 0) {
-      dead.push(seg)
+      dead.push({ seg, index: i })
       if (i === 0) s.headD -= SPACING
     } else alive.push(seg)
   }

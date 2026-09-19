@@ -1,39 +1,27 @@
 export interface Vec { x: number; y: number }
 
-export type UnitType = 'frost' | 'blaze' | 'venom' | 'volt' | 'shadow'
 export type Evo = 'none' | 'safe' | 'risky'
 
-export interface UnitDef {
-  type: UnitType
-  name: string
-  color: string
-  price: number
-  /** damage per hit at level 1 */
-  dmg: number
-  /** attacks per second */
-  rate: number
-  /** px from slot center */
-  range: number
-  desc: string
-}
+/** One orbiting sword: its own cooldown and orbit phase. */
+export interface Sword { cooldown: number; phase: number }
 
+/** The only unit type is the swordsman; level = number of swords (1..5). */
 export interface Unit {
   id: number
-  type: UnitType
   level: number
   evo: Evo
   slot: number
-  cooldown: number
+  swords: Sword[]
 }
+
+/** A flask dropped by the worm; `hp` hits (sword or tap) break it and release a swordsman. */
+export interface Flask { id: number; slot: number; hp: number; maxHp: number; age: number }
 
 export interface Segment {
   id: number
   hp: number
   maxHp: number
   head: boolean
-  /** seconds of poison left */
-  poison: number
-  poisonDps: number
   /** seconds of slow left (head only matters) */
   slow: number
   /** hit flash timer (render) */
@@ -43,15 +31,13 @@ export interface Segment {
 export type BossKind = 'none' | 'regen' | 'dash' | 'shield' | 'king'
 export interface BossState { kind: BossKind; timer: number; next: number; dashT: number; shield: number }
 
-export interface Shot { x: number; y: number; tx: number; ty: number; t: number; type: UnitType; unitId: number; segId: number }
+/** A sword flying from a unit to a target and back; `t` runs 0..dur. */
+export interface Shot { unitId: number; sword: number; from: Vec; to: Vec; t: number; dur: number; kind: 'segment' | 'flask' }
+export interface Popup { x: number; y: number; text: string; t: number; color: string }
 export interface Particle { x: number; y: number; vx: number; vy: number; t: number; color: string; r: number }
 
-
-export interface Popup { x: number; y: number; text: string; t: number; color: string }
-export interface Beam { from: Vec; to: Vec; t: number; color: string }
-
 export type Phase = 'menu' | 'ready' | 'wave' | 'evolution' | 'event' | 'over' | 'won'
-export type EventId = 'goldrush' | 'rush' | 'gift' | 'frost'
+export type EventId = 'flaskrain' | 'rush' | 'gift' | 'frost'
 
 export interface GameState {
   phase: Phase
@@ -59,7 +45,6 @@ export interface GameState {
   wave: number
   boss: BossState
   lives: number
-  gold: number
   score: number
   killed: number
   merges: number
@@ -67,18 +52,19 @@ export interface GameState {
   /** duel seed when playing a duel, else null */
   seed: number | null
   units: Unit[]
+  flasks: Flask[]
   snake: Segment[]
   /** path distance of the first segment */
   headD: number
-  shop: (UnitType | null)[]
-  rerollCost: number
+  /** kills since the last flask drop */
+  killsSinceFlask: number
   pendingEvo: number | null
+  pendingEvent: EventId | null
   /** phase to return to after evolution/event overlays */
   resume: Phase
-  pendingEvent: EventId | null
-  goldMul: number
+  flaskMul: number
   speedMul: number
-  fx: { popups: Popup[]; beams: Beam[]; shots: Shot[]; parts: Particle[]; sounds: string[]; shake: number }
+  fx: { popups: Popup[]; shots: Shot[]; parts: Particle[]; sounds: string[]; shake: number }
   time: number
   nextId: number
 }

@@ -3,7 +3,7 @@ import { distanceToPath, pointAt } from '../path'
 import { getLevel, LEVELS, unlockAfterWin } from '../levels'
 import { PATH_WIDTH, SLOT_R } from '../layout'
 
-describe('ring path (level 1)', () => {
+describe('meadow path (level 1)', () => {
   const p = getLevel(1).path
 
   it('starts top-right and ends on the right side just below the spawn', () => {
@@ -23,10 +23,9 @@ describe('ring path (level 1)', () => {
     expect(pointAt(p, 9999).y).toBeCloseTo(106)
   })
 
-  it('walks left first, then down', () => {
+  it('walks left first, then down the (bent) left side', () => {
     expect(pointAt(p, 100).x).toBeCloseTo(254)
-    const quarter = pointAt(p, p.length * 0.35)
-    expect(quarter.x).toBeCloseTo(36)
+    for (const k of [0.25, 0.3, 0.35, 0.4]) expect(pointAt(p, p.length * k).x).toBeLessThan(110)
   })
 })
 

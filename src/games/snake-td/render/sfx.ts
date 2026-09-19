@@ -58,6 +58,10 @@ export class Sfx {
       return
     }
     switch (name) {
+      case 'sword': if (now - this.lastShot < 60) return; this.lastShot = now; this.tone(1400, 0.05, 'triangle', 0.045, 600); this.noise(0.04, 0.03); break
+      case 'glass': this.tone(1800, 0.06, 'sine', 0.06, 900); this.noise(0.03, 0.03); break
+      case 'flask': this.tone(600, 0.1, 'sine', 0.06, 900); this.tone(900, 0.12, 'sine', 0.06, undefined, 0.08); break
+      case 'spawn': [660, 880, 1100].forEach((f, i) => this.tone(f, 0.12, 'triangle', 0.08, undefined, i * 0.07)); this.noise(0.15, 0.06); break
       case 'kill': this.tone(420, 0.08, 'triangle', 0.07, 820); this.noise(0.05, 0.05); break
       case 'killHead': this.tone(220, 0.4, 'sawtooth', 0.16, 45); this.noise(0.35, 0.16); break
       case 'merge': [523, 659, 784].forEach((f, i) => this.tone(f, 0.1, 'sine', 0.1, undefined, i * 0.07)); break

@@ -17,7 +17,7 @@ export const GAMES: GameMeta[] = [
   {
     id: 'snake-td',
     title: 'Snake Defense',
-    description: 'Змея ползёт к воротам — ставь и сливай бойцов, 10 волн',
+    description: 'Мечники против каменного червя: разбивай колбы, сливай, эволюционируй',
     icon: '🐍',
     ready: true,
     component: lazy(() => import('./snake-td/SnakeDefense')),

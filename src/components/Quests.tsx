@@ -3,7 +3,7 @@ import { claimQuest, getDuels, getEvents, getQuests, setPendingDuel, type DuelVi
 import { goGame } from '../lib/router'
 import { haptic } from '../lib/telegram'
 
-const LEVEL_NAME: Record<number, string> = { 1: 'Луг', 2: 'Пустыня', 3: 'Снега', 4: 'Бесконечность' }
+const LEVEL_NAME: Record<number, string> = { 1: 'Излучина', 2: 'Серпантин', 3: 'Песочные часы', 4: 'Клыки' }
 
 function untilText(iso: string): string {
   const d = new Date(iso)

@@ -1,54 +1,65 @@
 import { bossForWave, bossHpMul, newBoss, tickBoss } from './boss'
-import { tickCombat, tickFx } from './combat'
+import { hitFlask, tickCombat, tickFx } from './combat'
 import { getLevel } from './levels'
 import { pointAt } from './path'
 import { pick, rand, seeded, setRng } from './rng'
-import { advanceSnake, makeSnake, removeDead } from './snake'
-import type { EventId, GameState, Unit, UnitType } from './types'
-import { canMerge, EVO_LEVEL, UNIT_DEFS, UNIT_TYPES } from './units'
+import { advanceSnake, makeSnake, removeDead, segmentPos } from './snake'
+import type { EventId, Flask, GameState, Unit } from './types'
+import { canMerge, EVO_LEVEL, makeSwords, unitRange } from './units'
 
-export const START_GOLD = 60
 export const START_LIVES = 10
-export const SHOP_SIZE = 3
-export const WAVE_BONUS = 30
+export const FLASK_HP = 5
+export const MAX_FLASKS = 3
+/** kills needed for a flask: FLASK_BASE + wave */
+export const FLASK_BASE = 2
 
 export const EVENTS: Record<EventId, { title: string; desc: string; icon: string }> = {
-  goldrush: { title: 'Золотая лихорадка', desc: 'Золото за сегменты ×2 на следующей волне', icon: '💰' },
-  rush: { title: 'Бешеная змея', desc: 'Змея быстрее на 40%, но золото ×3', icon: '⚡' },
-  gift: { title: 'Подарок', desc: 'Бесплатный боец на свободный слот', icon: '🎁' },
-  frost: { title: 'Заморозки', desc: 'Змея медленнее на 30% на следующей волне', icon: '❄️' },
+  flaskrain: { title: 'Дождь колб', desc: 'Две колбы сразу и колбы падают вдвое чаще на следующей волне', icon: '🧪' },
+  rush: { title: 'Бешеный червь', desc: 'Червь быстрее на 40%, но колбы падают втрое чаще', icon: '⚡' },
+  gift: { title: 'Подкрепление', desc: 'Мечник 2-го уровня на свободную позицию', icon: '🎁' },
+  frost: { title: 'Заморозки', desc: 'Червь медленнее на 30% на следующей волне', icon: '❄️' },
 }
 const EVENT_IDS = Object.keys(EVENTS) as EventId[]
 
 export const maxWave = (s: GameState): number => getLevel(s.level).waves
+export const unitAt = (s: GameState, slot: number): Unit | undefined => s.units.find((u) => u.slot === slot)
+export const flaskAt = (s: GameState, slot: number): Flask | undefined => s.flasks.find((f) => f.slot === slot)
+export const freeSlots = (s: GameState): number[] =>
+  getLevel(s.level).slots.map((_, i) => i).filter((i) => !unitAt(s, i) && !flaskAt(s, i))
+export const canAct = (s: GameState): boolean => s.phase === 'ready' || s.phase === 'wave'
 
-function rollShop(s: GameState): void {
-  // cheaper units more common early
-  s.shop = Array.from({ length: SHOP_SIZE }, () => {
-    const pool: UnitType[] = s.wave < 3 ? ['volt', 'frost', 'blaze', 'venom'] : UNIT_TYPES
-    return pick(pool)
-  })
+function addUnit(s: GameState, slot: number, level = 1): Unit {
+  const u: Unit = { id: s.nextId++, level, evo: 'none', slot, swords: makeSwords(level) }
+  s.units.push(u)
+  return u
+}
+
+/** Drop a flask on a free slot, preferring one some swordsman can reach (else the player taps it). */
+export function spawnFlask(s: GameState): Flask | null {
+  if (s.flasks.length >= MAX_FLASKS) return null
+  const free = freeSlots(s)
+  if (!free.length) return null
+  const slots = getLevel(s.level).slots
+  const reachable = free.filter((i) => s.units.some((u) => Math.hypot(slots[u.slot].x - slots[i].x, slots[u.slot].y - slots[i].y) <= unitRange(u)))
+  const f: Flask = { id: s.nextId++, slot: pick(reachable.length ? reachable : free), hp: FLASK_HP, maxHp: FLASK_HP, age: 0 }
+  s.flasks.push(f)
+  s.fx.sounds.push('flask')
+  return f
 }
 
 export function createGame(level = 1, seed: number | null = null): GameState {
   setRng(seed === null ? Math.random : seeded(seed))
+  const lvl = getLevel(level)
   const s: GameState = {
-    phase: 'ready', level, wave: 1, boss: newBoss('none'), lives: START_LIVES, gold: START_GOLD, score: 0, killed: 0, merges: 0, evolutions: 0, seed,
-    units: [], snake: [], headD: 0, shop: [], rerollCost: 10,
+    phase: 'ready', level, wave: 1, boss: newBoss('none'), lives: START_LIVES, score: 0, killed: 0, merges: 0, evolutions: 0, seed,
+    units: [], flasks: [], snake: [], headD: 0, killsSinceFlask: 0,
     pendingEvo: null, pendingEvent: null, resume: 'ready',
-    goldMul: 1, speedMul: 1, fx: { popups: [], beams: [], shots: [], parts: [], sounds: [], shake: 0 }, time: 0, nextId: 1,
+    flaskMul: 1, speedMul: 1, fx: { popups: [], shots: [], parts: [], sounds: [], shake: 0 }, time: 0, nextId: 1,
   }
-  rollShop(s)
+  // start with one swordsman near the road and one flask to break
+  addUnit(s, Math.min(3, lvl.slots.length - 1))
+  spawnFlask(s)
   return s
-}
-
-export const unitAt = (s: GameState, slot: number): Unit | undefined => s.units.find((u) => u.slot === slot)
-export const freeSlots = (s: GameState): number[] => getLevel(s.level).slots.map((_, i) => i).filter((i) => !unitAt(s, i))
-
-function addUnit(s: GameState, type: UnitType, slot: number, level = 1): Unit {
-  const u: Unit = { id: s.nextId++, type, level, evo: 'none', slot, cooldown: 0 }
-  s.units.push(u)
-  return u
 }
 
 export function startWave(s: GameState): void {
@@ -64,10 +75,9 @@ export function startWave(s: GameState): void {
 }
 
 function endWave(s: GameState): void {
-  s.gold += WAVE_BONUS
   s.score += 100 * s.wave
   s.wave++
-  s.goldMul = 1
+  s.flaskMul = 1
   s.speedMul = 1
   if (s.wave > maxWave(s)) { s.phase = 'won'; s.fx.sounds.push('win'); return }
   if (s.wave % 2 === 0) {
@@ -84,57 +94,56 @@ function burst(s: GameState, x: number, y: number, color: string, n: number, big
   }
 }
 
+/** Broken flasks release swordsmen. */
+function tickFlasks(s: GameState, dt: number): void {
+  const lvl = getLevel(s.level)
+  for (const f of s.flasks) f.age += dt
+  const broken = s.flasks.filter((f) => f.hp <= 0)
+  if (!broken.length) return
+  s.flasks = s.flasks.filter((f) => f.hp > 0)
+  for (const f of broken) {
+    const c = lvl.slots[f.slot]
+    burst(s, c.x, c.y, '#bfe8ff', 14)
+    addUnit(s, f.slot)
+    s.fx.sounds.push('spawn')
+    s.fx.popups.push({ x: c.x, y: c.y - 40, text: 'Мечник!', t: 0.9, color: '#ffd54a' })
+  }
+}
+
 export function tick(s: GameState, dt: number): void {
   tickFx(s, dt)
-  if (s.phase !== 'wave') return
+  if (s.phase !== 'ready' && s.phase !== 'wave') return
+  tickFlasks(s, dt)
+  if (s.phase !== 'wave') { tickCombat(s, dt); return } // swords still break flasks between waves
   s.time += dt
   const passes = advanceSnake(s, dt)
   if (passes > 0) { s.fx.sounds.push('pass'); s.fx.shake = Math.max(s.fx.shake, 0.3) }
   tickBoss(s, dt)
   tickCombat(s, dt)
   const lvl = getLevel(s.level)
-  const deadPositions = s.snake.map((_, i) => i)
-  const before = [...s.snake]
-  for (const dead of removeDead(s)) {
-    const g = Math.round((dead.head ? 20 + 5 * s.wave : 2 + Math.floor(s.wave / 3)) * s.goldMul)
-    s.gold += g
+  const positions = s.snake.map((_, i) => segmentPos(s, i))
+  for (const { seg, index } of removeDead(s)) {
     s.killed++
-    s.score += dead.head ? 25 : 1
-    const idx = before.indexOf(dead)
-    const d = ((s.headD + (dead.head ? 30 : 0) - deadPositions[idx] * 30) % lvl.path.length + lvl.path.length) % lvl.path.length
-    const p = pointAt(lvl.path, d)
-    burst(s, p.x, p.y, dead.head ? '#ffd54a' : '#dfe6f3', dead.head ? 26 : 7, dead.head)
-    s.fx.popups.push({ x: p.x, y: p.y - 26, text: `+${g}`, t: 0.8, color: '#ffd54a' })
-    s.fx.sounds.push(dead.head ? 'killHead' : 'kill')
-    if (dead.head) s.fx.shake = Math.max(s.fx.shake, 0.4)
+    s.score += seg.head ? 25 : 1
+    const p = pointAt(lvl.path, positions[index])
+    burst(s, p.x, p.y, seg.head ? '#ffd54a' : '#dfe6f3', seg.head ? 26 : 7, seg.head)
+    s.fx.sounds.push(seg.head ? 'killHead' : 'kill')
+    if (seg.head) s.fx.shake = Math.max(s.fx.shake, 0.4)
+    s.killsSinceFlask++
+    const need = Math.max(2, Math.round((FLASK_BASE + s.wave) / s.flaskMul))
+    if (seg.head || s.killsSinceFlask >= need) {
+      if (spawnFlask(s)) { s.killsSinceFlask = 0; s.fx.popups.push({ x: p.x, y: p.y - 28, text: '🧪 колба!', t: 0.9, color: '#bfe8ff' }) }
+    }
   }
   if (s.lives <= 0) { s.phase = 'over'; s.fx.sounds.push('lose'); return }
   if (s.snake.length === 0) endWave(s)
 }
 
-/** Board actions are only legal while the player sees the board. */
-export const canAct = (s: GameState): boolean => s.phase === 'ready' || s.phase === 'wave'
-
-export function buyAndPlace(s: GameState, shopIdx: number, slot: number): boolean {
-  if (!canAct(s)) return false
-  const type = s.shop[shopIdx]
-  if (!type || unitAt(s, slot)) return false
-  const price = UNIT_DEFS[type].price
-  if (s.gold < price) return false
-  s.gold -= price
-  addUnit(s, type, slot)
-  s.shop[shopIdx] = null
-  if (s.shop.every((t) => t === null)) rollShop(s)
-  s.fx.sounds.push('buy')
-  return true
-}
-
-export function reroll(s: GameState): boolean {
-  if (!canAct(s) || s.gold < s.rerollCost) return false
-  s.gold -= s.rerollCost
-  s.rerollCost += 5
-  rollShop(s)
-  s.fx.sounds.push('click')
+/** Player taps a flask: one hit. */
+export function tapFlask(s: GameState, flaskId: number): boolean {
+  const f = s.flasks.find((x) => x.id === flaskId)
+  if (!canAct(s) || !f) return false
+  hitFlask(s, f)
   return true
 }
 
@@ -143,16 +152,18 @@ export type MoveResult = 'moved' | 'merged' | 'blocked'
 export function moveOrMerge(s: GameState, unitId: number, slot: number): MoveResult {
   const u = s.units.find((x) => x.id === unitId)
   if (!canAct(s) || !u || u.slot === slot) return 'blocked'
+  if (flaskAt(s, slot)) return 'blocked'
   const target = unitAt(s, slot)
   if (!target) { u.slot = slot; return 'moved' }
   if (!canMerge(u, target)) return 'blocked'
   s.units = s.units.filter((x) => x.id !== u.id)
   target.level++
+  target.swords = makeSwords(target.level)
   s.merges++
   s.fx.sounds.push('merge')
   const c = getLevel(s.level).slots[slot]
-  burst(s, c.x, c.y, UNIT_DEFS[target.type].color, 12)
-  if (target.level === EVO_LEVEL && target.evo === 'none') {
+  burst(s, c.x, c.y, '#ffd54a', 12)
+  if (target.level >= EVO_LEVEL && target.evo === 'none') {
     s.pendingEvo = target.id
     s.resume = s.phase
     s.phase = 'evolution'
@@ -168,7 +179,8 @@ export function chooseEvolution(s: GameState, choice: 'safe' | 'risky'): boolean
   s.evolutions++
   if (choice === 'safe') { u.evo = 'safe'; s.fx.sounds.push('evo'); return true }
   if (rand() < 0.5) { u.evo = 'risky'; s.fx.sounds.push('evo'); return true }
-  u.level = Math.max(1, u.level - 1)
+  u.level = EVO_LEVEL - 1
+  u.swords = makeSwords(u.level)
   s.fx.sounds.push('error')
   return false
 }
@@ -176,29 +188,16 @@ export function chooseEvolution(s: GameState, choice: 'safe' | 'risky'): boolean
 export function resolveEvent(s: GameState): void {
   const e = s.pendingEvent
   s.pendingEvent = null
-  s.phase = 'ready' // events only happen between waves
+  s.phase = 'ready'
   switch (e) {
-    case 'goldrush': s.goldMul = 2; break
-    case 'rush': s.speedMul = 1.4; s.goldMul = 3; break
+    case 'flaskrain': s.flaskMul = 2; spawnFlask(s); spawnFlask(s); break
+    case 'rush': s.speedMul = 1.4; s.flaskMul = 3; break
     case 'frost': s.speedMul = 0.7; break
     case 'gift': {
       const free = freeSlots(s)
-      if (free.length) addUnit(s, pick(UNIT_TYPES), pick(free))
-      else s.gold += 25
+      if (free.length) addUnit(s, pick(free), 2)
+      else spawnFlask(s)
       break
     }
   }
-}
-
-export function sellValue(u: Unit): number {
-  return Math.round(UNIT_DEFS[u.type].price * 0.6 * Math.pow(1.8, u.level - 1))
-}
-
-export function sellUnit(s: GameState, unitId: number): boolean {
-  const u = s.units.find((x) => x.id === unitId)
-  if (!canAct(s) || !u) return false
-  s.gold += sellValue(u)
-  s.units = s.units.filter((x) => x.id !== unitId)
-  s.fx.sounds.push('sell')
-  return true
 }
