@@ -1,4 +1,17 @@
-import WebApp from '@twa-dev/sdk'
+import WebAppImport from '@twa-dev/sdk'
+
+type WebAppT = typeof WebAppImport
+/**
+ * `@twa-dev/sdk` ships CommonJS behind an `import` condition, so depending on the bundler's interop
+ * the default import is either the WebApp object or `{ default: WebApp }`. Resolve both, and fall
+ * back to the global the SDK script installs.
+ */
+const WebApp: WebAppT = (() => {
+  const raw = WebAppImport as unknown as { default?: WebAppT; initData?: unknown }
+  if (raw && typeof raw.initData === 'string') return raw as WebAppT
+  if (raw?.default && typeof (raw.default as { initData?: unknown }).initData === 'string') return raw.default
+  return (window as unknown as { Telegram?: { WebApp?: WebAppT } }).Telegram?.WebApp ?? (raw as WebAppT)
+})()
 
 /** True when running inside the Telegram client (initData is non-empty). */
 export const isTelegram = Boolean(WebApp.initData)

@@ -139,19 +139,23 @@ button { font: inherit; }
 
 /* Profile & sheets */
 .profile {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; flex-direction: column; gap: 10px;
   background: #e8d7b0; border: 16px solid transparent;
   border-image: url('/games/assets/ts/ui/Carved_9Slides.png') 64 fill / 16px stretch;
   color: #3a2a12; padding: 0 2px;
 }
+.profile-top { display: flex; align-items: center; gap: 12px; }
 .profile-body b { color: #3a2a12; }
 .profile-coins { color: #8a5a00 !important; }
+.profile-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .profile .chip {
-  background: none; padding: 0; width: 44px; height: 42px;
+  background: none; padding: 0; width: auto; height: 52px;
   border-style: solid; border-color: transparent; border-width: 0 12px;
   border-image: url('/games/assets/ts/ui/Button_Blue_3Slides.png') 0 64 fill / 0 12px stretch;
-  color: #fff; font-size: 16px; line-height: 42px;
+  color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1;
 }
+.profile .chip span { font-size: 18px; }
+.profile .chip small { font-size: 10px; font-weight: 700; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
 .profile-offline { color: #6b5636; font-size: 13px; }
 .profile-avatar {
   width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex: none;

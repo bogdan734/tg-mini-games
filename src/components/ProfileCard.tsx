@@ -45,19 +45,21 @@ export default function ProfileCard() {
   return (
     <>
       <div className="profile">
-        <div className="profile-avatar">
-          {u?.photo ? <img src={u.photo} alt="" /> : <span>{(u?.name ?? '?').slice(0, 1)}</span>}
-        </div>
-        <div className="profile-body">
-          <b>{u?.name ?? 'Загрузка…'}</b>
-          <span className="profile-coins">🪙 {u?.coins ?? 0}</span>
+        <div className="profile-top">
+          <div className="profile-avatar">
+            {u?.photo ? <img src={u.photo} alt="" /> : <span>{(u?.name ?? '?').slice(0, 1)}</span>}
+          </div>
+          <div className="profile-body">
+            <b>{u?.name ?? 'Загрузка…'}</b>
+            <span className="profile-coins">🪙 {u?.coins ?? 0}{profile && profile.referrals > 0 ? ` · 👥 ${profile.referrals}` : ''}</span>
+          </div>
         </div>
         <div className="profile-actions">
-          <button className="chip" onClick={() => { haptic('light'); setModal('quests') }}>📋</button>
-          <button className="chip" onClick={() => { haptic('light'); setModal('shop') }}>🛒</button>
-          <button className="chip" onClick={() => { haptic('light'); setModal('board') }}>🏆</button>
-          <button className="chip" onClick={() => { haptic('light'); setModal('donate') }}>⭐</button>
-          <button className="chip" onClick={() => { haptic('light'); if (profile) shareText('Залетай в мини-игры, го соревноваться 🎮', profile.inviteLink) }}>👥</button>
+          <button className="chip" onClick={() => { haptic('light'); setModal('quests') }}><span>📋</span><small>Задания</small></button>
+          <button className="chip" onClick={() => { haptic('light'); setModal('shop') }}><span>🛒</span><small>Магазин</small></button>
+          <button className="chip" onClick={() => { haptic('light'); setModal('board') }}><span>🏆</span><small>Рейтинг</small></button>
+          <button className="chip" onClick={() => { haptic('light'); setModal('donate') }}><span>⭐</span><small>Поддержать</small></button>
+          <button className="chip" onClick={() => { haptic('light'); if (profile) shareText('Залетай в мини-игры, го соревноваться 🎮', profile.inviteLink) }}><span>👥</span><small>Друзья</small></button>
         </div>
       </div>
       {modal === 'board' && <Leaderboard onClose={() => setModal(null)} />}

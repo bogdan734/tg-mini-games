@@ -1,5 +1,4 @@
-import WebApp from '@twa-dev/sdk'
-import { versionAtLeast } from './telegram'
+import { versionAtLeast, WebApp } from './telegram'
 
 /**
  * Key/value storage: Telegram CloudStorage (synced across devices) when available,
