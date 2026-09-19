@@ -1,29 +1,21 @@
 import type { Vec } from '../../snake-td/engine/types'
 export type { Vec }
 
-export type TowerType =
-  | 'fire' | 'ice' | 'robot' | 'storm' | 'nature'
-  | 'firebot' | 'firestorm' | 'blizzard' | 'cryobot' | 'tesla' | 'wildfire'
-  | 'mechagod' | 'glacius' | 'titan'
+export type Element = 'fire' | 'ice' | 'bolt' | 'nature' | 'dark'
 
-export type Effect = 'none' | 'burn' | 'slow' | 'chain' | 'aoe' | 'root'
-
-export interface TowerDef {
-  type: TowerType
+export interface ElementDef {
+  id: Element
   name: string
-  tier: 1 | 2 | 3
-  color: string
   emoji: string
-  dmg: number
-  rate: number
-  range: number
-  effect: Effect
-  desc: string
+  color: string
+  glow: string
+  effect: string
 }
 
-export interface Tower { id: number; type: TowerType; level: number; tile: number; cooldown: number }
+/** A tower is a set of elements (union of everything merged into it) at level 1..4. */
+export interface Tower { id: number; elements: Element[]; level: number; tile: number; cooldown: number }
 
-export type EnemyKind = 'skeleton' | 'wolf' | 'brute' | 'boss'
+export type EnemyKind = 'skeleton' | 'wolf' | 'brute' | 'golem' | 'frostworm' | 'darklord'
 export interface Enemy {
   id: number
   kind: EnemyKind
@@ -36,16 +28,19 @@ export interface Enemy {
   burn: number
   burnDps: number
   root: number
+  curse: number
   hitT: number
+  /** last resist/weak popup timer so the label does not spam */
+  labelT: number
 }
 
 export interface Popup { x: number; y: number; text: string; t: number; color: string }
-export interface Shot { x: number; y: number; tx: number; ty: number; t: number; type: TowerType; towerId: number }
+export interface Shot { x: number; y: number; tx: number; ty: number; t: number; elements: Element[]; towerId: number; level: number }
 export interface Particle { x: number; y: number; vx: number; vy: number; t: number; color: string; r: number }
 
 export type Phase = 'menu' | 'ready' | 'wave' | 'over' | 'won'
 
-export interface Choice { tile: number; options: TowerType[] }
+export interface Choice { tile: number; options: Element[] }
 
 export interface GameState {
   phase: Phase
@@ -59,7 +54,6 @@ export interface GameState {
   seed: number | null
   towers: Tower[]
   enemies: Enemy[]
-  /** remaining spawns for the running wave: seconds until each spawns */
   spawnQueue: { kind: EnemyKind; at: number }[]
   waveTime: number
   choice: Choice | null

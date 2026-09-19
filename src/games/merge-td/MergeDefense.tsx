@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiEnabled, submitScore, type ScoreResult } from '../../lib/api'
-import { haptic, shareText } from '../../lib/telegram'
+import { haptic, lockSwipes, shareText } from '../../lib/telegram'
 import { Sfx } from '../snake-td/render/sfx'
 import '../snake-td/snake-td.css'
 import type { GameProps } from '../types'
@@ -8,6 +8,7 @@ import { MAX_WAVE } from './engine/enemies'
 import {
   closeChoice, createGame, moveOrMerge, openChoice, pickChoice, rerollChoice, sellTower, startWave, tick, towerAt,
 } from './engine/game'
+import { towerName } from './engine/towers'
 import type { GameState, Phase } from './engine/types'
 import {
   choiceCloseRect, choiceRect, choiceRerollRect, drawGame, H, inRect, muteRect, preloadMergeAssets, sellZoneRect, tileAt, type ViewState, W, waveButtonRect,
@@ -121,6 +122,7 @@ export default function MergeDefense({ onScore }: GameProps) {
   const onDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const s = stateRef.current, v = viewRef.current
     sfxRef.current.unlock()
+    lockSwipes()
     const { x, y } = toCanvas(e)
     if (inRect(muteRect(), x, y)) {
       v.muted = !v.muted
@@ -145,7 +147,7 @@ export default function MergeDefense({ onScore }: GameProps) {
     const tile = tileAt(x, y)
     if (tile === null) { if (s.choice) closeChoice(s); v.selected = null; return }
     const t = towerAt(s, tile)
-    if (t) { v.drag = { towerId: t.id, type: t.type, x, y, moved: false }; v.selected = t.id; closeChoice(s); return }
+    if (t) { v.drag = { towerId: t.id, x, y, moved: false }; v.selected = t.id; closeChoice(s); return }
     if (!openChoice(s, tile)) { toast(`Нужно ${s.placeCost} 💰`); haptic('error'); sfxRef.current.play('error') }
     else { haptic('light'); v.selected = null }
   }, [])
@@ -167,8 +169,8 @@ export default function MergeDefense({ onScore }: GameProps) {
     const tile = tileAt(x, y)
     if (tile !== null) {
       const res = moveOrMerge(s, d.towerId, tile)
-      if (res === 'merged') { haptic('success'); const t = towerAt(s, tile); toast(t ? `Слияние: ${t.type === d.type ? 'уровень ' + t.level : 'новое существо!'}` : 'Слияние!'); v.selected = t?.id ?? null }
-      else if (res === 'blocked') { toast('Эти башни не сливаются'); haptic('error'); sfxRef.current.play('error') }
+      if (res === 'merged') { haptic('success'); const t = towerAt(s, tile); toast(t ? `Слияние → ур.${t.level}: ${towerName(t)}` : 'Слияние!'); v.selected = t?.id ?? null }
+      else if (res === 'blocked') { toast('Сумма уровней больше 4'); haptic('error'); sfxRef.current.play('error') }
       return
     }
     if (inRect(sellZoneRect(), x, y) && sellTower(s, d.towerId)) { toast('Продано'); haptic('medium'); v.selected = null }

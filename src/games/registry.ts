@@ -9,7 +9,7 @@ export const GAMES: GameMeta[] = [
   {
     id: 'merge-td',
     title: 'Merge Defense',
-    description: 'Ставь стихии на плитки, сливай в новых существ, 12 волн',
+    description: 'Стихии против гоблинов: любые две башни сливаются, боссы с резистами',
     icon: '🏰',
     ready: true,
     component: lazy(() => import('./merge-td/MergeDefense')),
