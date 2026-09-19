@@ -79,19 +79,46 @@ function text(ctx: CanvasRenderingContext2D, str: string, x: number, y: number, 
   ctx.fillStyle = color; ctx.fillText(str, x, y)
 }
 
-/** A small pixel-style sword pointing along +x (tip at +len/2). */
-function drawSword(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, len: number, glow: string, alpha = 1) {
+/** A big hovering sword pointing along +x (tip at +len/2), with a flame trail behind the pommel. */
+function drawSword(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, len: number, glow: string, alpha = 1, time = 0, flame = true) {
   ctx.save()
   ctx.translate(x, y); ctx.rotate(angle); ctx.globalAlpha = alpha
-  const h = len * 0.5
-  ctx.shadowColor = glow; ctx.shadowBlur = 8
-  ctx.fillStyle = '#dfe7f2'; ctx.beginPath(); ctx.moveTo(h, 0); ctx.lineTo(h - 5, -3); ctx.lineTo(-h * 0.35, -3); ctx.lineTo(-h * 0.35, 3); ctx.lineTo(h - 5, 3); ctx.closePath(); ctx.fill()
+  const h = len * 0.5, bw = len * 0.11
+  if (flame) {
+    // blazing tip: tongues of fire licking off the point
+    for (let i = 0; i < 5; i++) {
+      const k = i / 5
+      const fl = 9 + Math.sin(time * 16 + i * 1.9) * 3
+      ctx.fillStyle = i < 2 ? 'rgba(255,230,120,0.8)' : i < 4 ? 'rgba(255,160,50,0.65)' : 'rgba(255,90,30,0.45)'
+      ctx.beginPath(); ctx.ellipse(h - 4 + k * 12 + Math.sin(time * 9 + i) * 2, Math.sin(time * 14 + i * 2.1) * 3 * (1 + k), fl * (1 - k * 0.4), bw * (1.4 - k * 0.5), 0, 0, Math.PI * 2); ctx.fill()
+    }
+  }
+  ctx.shadowColor = glow; ctx.shadowBlur = 10
+  // blade
+  const g = ctx.createLinearGradient(0, -bw, 0, bw); g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#d6e2f0'); g.addColorStop(1, '#8f9bb3')
+  ctx.fillStyle = g
+  ctx.beginPath(); ctx.moveTo(h, 0); ctx.lineTo(h - bw * 1.6, -bw); ctx.lineTo(-h * 0.3, -bw); ctx.lineTo(-h * 0.3, bw); ctx.lineTo(h - bw * 1.6, bw); ctx.closePath(); ctx.fill()
   ctx.shadowBlur = 0
-  ctx.fillStyle = '#8f9bb3'; ctx.fillRect(-h * 0.35, -1, h + 5 - h * 0.35 - 5, 2)
-  ctx.fillStyle = '#c98a12'; ctx.fillRect(-h * 0.42, -5, 4, 10)
-  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-h * 0.42 - 7, -2, 7, 4)
-  ctx.fillStyle = '#ffd54a'; ctx.beginPath(); ctx.arc(-h * 0.42 - 8, 0, 2.2, 0, Math.PI * 2); ctx.fill()
+  ctx.strokeStyle = '#4a5568'; ctx.lineWidth = 1.2; ctx.stroke()
+  ctx.strokeStyle = 'rgba(80,95,120,0.7)'; ctx.beginPath(); ctx.moveTo(-h * 0.3, 0); ctx.lineTo(h - bw * 2.2, 0); ctx.stroke()
+  // guard, grip, pommel
+  ctx.fillStyle = '#e0a53a'; ctx.fillRect(-h * 0.34, -bw * 2.1, bw * 0.9, bw * 4.2)
+  ctx.fillStyle = '#6b3f1d'; ctx.fillRect(-h * 0.34 - h * 0.22, -bw * 0.8, h * 0.22, bw * 1.6)
+  ctx.fillStyle = '#e0a53a'; ctx.beginPath(); ctx.arc(-h * 0.34 - h * 0.22 - bw * 0.9, 0, bw * 1.1, 0, Math.PI * 2); ctx.fill()
   ctx.restore()
+}
+
+/** Hover offsets for n swords: fanned above the unit, tilted outward. */
+function swordSlots(n: number, time: number, id: number): { dx: number; dy: number; angle: number }[] {
+  const out: { dx: number; dy: number; angle: number }[] = []
+  for (let k = 0; k < n; k++) {
+    const t = n === 1 ? 0.25 : k / (n - 1)
+    const a = -Math.PI * 0.95 + t * Math.PI * 0.9 // from far left-up to right-up
+    const r = 34 + (n > 3 ? 4 : 0)
+    const bob = Math.sin(time * 3 + id + k * 1.3) * 3
+    out.push({ dx: Math.cos(a) * r, dy: Math.sin(a) * r * 0.8 - 6 + bob, angle: a + Math.PI * 0.5 + (t - 0.5) * 0.4 })
+  }
+  return out
 }
 
 function drawUnit(ctx: CanvasRenderingContext2D, s: GameState, u: Unit, x: number, y: number, size: number, time: number, skin: string, alpha = 1) {
@@ -102,46 +129,49 @@ function drawUnit(ctx: CanvasRenderingContext2D, s: GameState, u: Unit, x: numbe
   const frame = an ? Math.min(spec.n - 1, Math.floor(((time - an.t) / an.dur) * spec.n)) : Math.floor(time * 8 + u.id) % spec.n
   drawImage(ctx, A.shadow, x, y + size * 0.34, size * 0.9, size * 0.5, 0.9 * alpha)
   drawFrame(ctx, sh, frame, spec.row, x, y, size, size, an?.flip ?? false, alpha)
-  // orbiting swords (the ones currently in flight are drawn by drawShots)
+  // hovering swords (the ones currently in flight are drawn by drawShots)
   const flying = new Set(s.fx.shots.filter((sh2) => sh2.unitId === u.id).map((sh2) => sh2.sword))
   const glow = u.evo === 'risky' ? '#ff6b6b' : u.evo === 'safe' ? '#c9a8ff' : u.level >= 3 ? '#ffe08a' : '#9fd4ff'
-  const orbit = 26 + u.level * 2
+  const slots = swordSlots(u.swords.length, time, u.id)
+  const swordLen = size * (u.swords.length <= 1 ? 0.72 : u.swords.length <= 3 ? 0.6 : 0.5)
   for (let k = 0; k < u.swords.length; k++) {
     if (flying.has(k)) continue
-    const ph = u.swords[k].phase
-    const sx = x + Math.cos(ph) * orbit, sy = y + 6 + Math.sin(ph) * orbit * 0.55
-    drawSword(ctx, sx, sy, ph + Math.PI / 2, 22, glow, alpha)
+    const sl = slots[k]
+    drawSword(ctx, x + sl.dx * (size / 78), y + sl.dy * (size / 78), sl.angle, swordLen, glow, alpha, time)
   }
 }
 
-function drawFlask(ctx: CanvasRenderingContext2D, f: Flask, c: Vec, time: number) {
-  const wob = Math.sin(time * 5 + f.id) * 2
-  const ratio = f.hp / f.maxHp
-  const y = c.y - 6
-  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 18, 18, 7, 0, 0, Math.PI * 2); ctx.fill()
-  ctx.save(); ctx.translate(c.x, y); ctx.rotate(wob * 0.02)
-  // body
-  ctx.fillStyle = 'rgba(200,235,255,0.55)'; ctx.strokeStyle = '#6fa8d6'; ctx.lineWidth = 2.5
-  ctx.beginPath(); ctx.moveTo(-6, -22); ctx.lineTo(-6, -8); ctx.bezierCurveTo(-20, -2, -20, 20, 0, 22); ctx.bezierCurveTo(20, 20, 20, -2, 6, -8); ctx.lineTo(6, -22); ctx.closePath(); ctx.fill(); ctx.stroke()
-  // liquid (glowing blue, level = hp)
-  ctx.save(); ctx.clip()
-  const top = 22 - 30 * ratio
-  const g = ctx.createLinearGradient(0, top, 0, 22); g.addColorStop(0, '#7fd4ff'); g.addColorStop(1, '#2f78c2')
-  ctx.fillStyle = g; ctx.fillRect(-20, top, 40, 30)
-  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(0, top + 1, 14, 3, 0, 0, Math.PI * 2); ctx.fill()
-  for (let i = 0; i < 3; i++) { const bx = -8 + i * 8, by = 18 - ((time * 30 + i * 13 + f.id * 7) % 26); if (by > top) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(bx, by, 1.6, 0, Math.PI * 2); ctx.fill() } }
+function drawFlask(ctx: CanvasRenderingContext2D, f: Flask, c: Vec, time: number, skin: string) {
+  const wob = Math.sin(time * 4 + f.id) * 1.5
+  const y = c.y - 4
+  // landing glow ring
+  const pulse = 0.6 + 0.4 * Math.sin(time * 5 + f.id)
+  ctx.fillStyle = `rgba(255,220,120,${0.25 * pulse})`; ctx.beginPath(); ctx.ellipse(c.x, c.y + 22, 30, 12, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.strokeStyle = `rgba(255,230,150,${0.6 * pulse})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(c.x, c.y + 22, 26, 10, 0, 0, Math.PI * 2); ctx.stroke()
+  ctx.save(); ctx.translate(c.x, y + wob)
+  const w = 22, hgt = 30
+  // jar body
+  ctx.fillStyle = 'rgba(215,240,255,0.55)'; ctx.strokeStyle = '#5d8fb8'; ctx.lineWidth = 2.5
+  ctx.beginPath(); ctx.roundRect(-w, -hgt + 6, w * 2, hgt * 2 - 6, 12); ctx.fill(); ctx.stroke()
+  // liquid + recruit silhouette inside
+  ctx.save(); ctx.beginPath(); ctx.roundRect(-w + 2, -hgt + 8, w * 2 - 4, hgt * 2 - 10, 10); ctx.clip()
+  const g = ctx.createLinearGradient(0, -hgt, 0, hgt); g.addColorStop(0, 'rgba(120,200,255,0.55)'); g.addColorStop(1, 'rgba(40,110,190,0.8)')
+  ctx.fillStyle = g; ctx.fillRect(-w, -hgt + 12, w * 2, hgt * 2)
+  const ghost: Unit = { id: f.id, level: 1, evo: 'none', slot: f.slot, swords: [] }
+  const sh = warrior(colorFor(ghost, skin))
+  const fr = Math.floor(time * 6 + f.id) % 6
+  ctx.globalAlpha = 0.85; drawFrame(ctx, sh, fr, 0, 0, 6 + Math.sin(time * 2 + f.id) * 2, 60, 60); ctx.globalAlpha = 1
+  ctx.fillStyle = 'rgba(120,200,255,0.35)'; ctx.fillRect(-w, -hgt, w * 2, hgt * 2)
+  for (let i = 0; i < 3; i++) { const bx = -10 + i * 10, by = hgt - 4 - ((time * 26 + i * 17 + f.id * 7) % (hgt * 2 - 14)); ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, Math.PI * 2); ctx.fill() }
   ctx.restore()
-  // cork + shine
-  ctx.fillStyle = '#a8703a'; ctx.fillRect(-7, -27, 14, 7)
-  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.ellipse(-8, 2, 3, 9, 0.2, 0, Math.PI * 2); ctx.fill()
+  // shine, rim, cork
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.ellipse(-w * 0.62, 0, 3, hgt * 0.6, 0.1, 0, Math.PI * 2); ctx.fill()
+  ctx.fillStyle = '#9fc6e0'; ctx.fillRect(-w + 3, -hgt + 2, w * 2 - 6, 6)
+  ctx.fillStyle = '#e39a3a'; ctx.beginPath(); ctx.roundRect(-w * 0.55, -hgt - 8, w * 1.1, 12, 3); ctx.fill()
+  ctx.fillStyle = '#b8752a'; ctx.fillRect(-w * 0.55, -hgt - 1, w * 1.1, 3)
   ctx.restore()
-  // hp pips
-  for (let i = 0; i < f.maxHp; i++) {
-    ctx.fillStyle = i < f.hp ? '#7fd4ff' : 'rgba(0,0,0,0.35)'
-    ctx.beginPath(); ctx.arc(c.x - (f.maxHp - 1) * 4 + i * 8, c.y + 30, 3, 0, Math.PI * 2); ctx.fill()
-  }
-  // sword glyph hint
-  text(ctx, '⚔', c.x + 20, y - 22 + wob, 12, '#fff')
+  // hits left, big and readable
+  text(ctx, String(f.hp), c.x, y - hgt - 22 + wob, 22, '#fff', 'center', true, 'rgba(0,0,0,0.7)')
 }
 
 // ---------------------------------------------------------------- field
@@ -255,22 +285,31 @@ function drawShots(ctx: CanvasRenderingContext2D, s: GameState, time: number) {
       }
     }
     const glow = u?.evo === 'risky' ? '#ff6b6b' : u?.evo === 'safe' ? '#c9a8ff' : (u?.level ?? 1) >= 3 ? '#ffe08a' : '#9fd4ff'
-    const k = sh.t / sh.dur // 0..1: out 0..0.45, strike 0.45..0.6, back 0.6..1
-    const out = k < 0.45 ? k / 0.45 : k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4
+    const k = sh.t / sh.dur // 0..1: out 0..0.35, strike 0.35..0.55, back 0.55..1
+    const out = k < 0.35 ? k / 0.35 : k < 0.55 ? 1 : 1 - (k - 0.55) / 0.45
     const e = out < 1 ? 1 - Math.pow(1 - out, 2) : 1
-    const x = sh.from.x + (sh.to.x - sh.from.x) * e, y = sh.from.y + (sh.to.y - sh.from.y) * e - Math.sin(e * Math.PI) * 14
-    const ang = Math.atan2(sh.to.y - sh.from.y, sh.to.x - sh.from.x) + (k < 0.6 ? 0 : Math.PI)
-    // trail
-    ctx.strokeStyle = glow; ctx.globalAlpha = 0.35; ctx.lineWidth = 3; ctx.lineCap = 'round'
-    ctx.beginPath(); ctx.moveTo(x - Math.cos(ang) * 14, y - Math.sin(ang) * 14); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha = 1
-    drawSword(ctx, x, y, ang + (k >= 0.45 && k < 0.6 ? Math.sin((k - 0.45) / 0.15 * Math.PI) * 1.2 : 0), 24, glow)
-    if (k >= 0.45 && k < 0.62) { // slash crescent at impact
-      const q = (k - 0.45) / 0.17
-      ctx.save(); ctx.translate(sh.to.x, sh.to.y); ctx.rotate(ang)
-      ctx.strokeStyle = `rgba(255,255,255,${1 - q})`; ctx.lineWidth = 5 - q * 3; ctx.lineCap = 'round'
-      ctx.beginPath(); ctx.arc(-6, 0, 16 + q * 12, -1.2, 1.2); ctx.stroke()
-      ctx.strokeStyle = glow; ctx.globalAlpha = 0.8 - q * 0.8; ctx.lineWidth = 2
-      ctx.beginPath(); ctx.arc(-6, 0, 22 + q * 14, -1.0, 1.0); ctx.stroke(); ctx.globalAlpha = 1
+    const x = sh.from.x + (sh.to.x - sh.from.x) * e, y = sh.from.y - 20 + (sh.to.y - sh.from.y + 20) * e - Math.sin(e * Math.PI) * 10
+    const dir = Math.atan2(sh.to.y - sh.from.y, sh.to.x - sh.from.x)
+    const ang = k < 0.55 ? dir : dir + Math.PI
+    // streak behind the blade while flying
+    if (k < 0.35 || k >= 0.55) {
+      ctx.strokeStyle = glow; ctx.globalAlpha = 0.45; ctx.lineWidth = 6; ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.moveTo(x - Math.cos(ang) * 26, y - Math.sin(ang) * 26); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha = 1
+    }
+    const spin = k >= 0.35 && k < 0.55 ? Math.sin(((k - 0.35) / 0.2) * Math.PI) * 1.6 : 0
+    drawSword(ctx, x, y, ang + spin, 46, glow, 1, time, k < 0.35 || k >= 0.55)
+    if (k >= 0.35 && k < 0.6) { // big cyan slash at impact
+      const q = (k - 0.35) / 0.25
+      ctx.save(); ctx.translate(sh.to.x, sh.to.y); ctx.rotate(dir + Math.PI * 0.15)
+      const R = 26 + q * 22
+      const sg = ctx.createRadialGradient(0, 0, R * 0.5, 0, 0, R * 1.3); sg.addColorStop(0, `rgba(255,255,255,${0.9 - q * 0.9})`); sg.addColorStop(0.5, `rgba(120,240,255,${0.8 - q * 0.8})`); sg.addColorStop(1, 'rgba(120,240,255,0)')
+      ctx.strokeStyle = sg; ctx.lineWidth = 14 - q * 8; ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.arc(-8, 0, R, -1.4, 1.4); ctx.stroke()
+      ctx.strokeStyle = `rgba(255,255,255,${0.9 - q * 0.9})`; ctx.lineWidth = 3
+      ctx.beginPath(); ctx.arc(-8, 0, R + 6, -1.1, 1.1); ctx.stroke()
+      // red cut marks on the segment
+      ctx.strokeStyle = `rgba(255,60,60,${0.9 - q * 0.6})`; ctx.lineWidth = 3
+      ctx.beginPath(); ctx.moveTo(-14, -12); ctx.lineTo(12, 12); ctx.moveTo(-4, -16); ctx.lineTo(18, 6); ctx.stroke()
       ctx.restore()
     }
   }
@@ -303,7 +342,7 @@ function drawPanel(ctx: CanvasRenderingContext2D, s: GameState, view: ViewState,
   for (let l = 1; l <= MAX_LEVEL; l++) {
     const x = 34 + (l - 1) * 58
     const have = s.units.filter((u) => u.level === l && u.evo === 'none').length
-    for (let k = 0; k < l; k++) drawSword(ctx, x - (l - 1) * 5 + k * 10, y0 + 24, -Math.PI / 2, 18, l >= 3 ? '#ffe08a' : '#9fd4ff', have ? 1 : 0.35)
+    for (let k = 0; k < l; k++) drawSword(ctx, x - (l - 1) * 5 + k * 10, y0 + 24, -Math.PI / 2, 20, l >= 3 ? '#ffe08a' : '#9fd4ff', have ? 1 : 0.35, 0, false)
     text(ctx, `ур.${l}${have ? ` ×${have}` : ''}`, x, y0 + 46, 11, have ? '#1f5fbf' : '#8a7a5a', 'center', false)
   }
   text(ctx, `Колбы падают каждые ${Math.max(2, Math.round((2 + s.wave) / s.flaskMul))} убийства — разбивай их, выходят мечники`, W / 2, y0 + 70, 11, '#6b5636', 'center', false)
@@ -374,7 +413,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, view: View
     ctx.fillStyle = 'rgba(159,212,255,0.12)'; ctx.strokeStyle = 'rgba(159,212,255,0.55)'; ctx.lineWidth = 2
     ctx.beginPath(); ctx.arc(c.x, c.y, unitRange(focus), 0, Math.PI * 2); ctx.fill(); ctx.stroke()
   }
-  for (const f of s.flasks) drawFlask(ctx, f, lvl.slots[f.slot], time)
+  for (const f of s.flasks) drawFlask(ctx, f, lvl.slots[f.slot], time, view.unitSkin)
   const sorted = [...s.units].sort((a, b) => lvl.slots[a.slot].y - lvl.slots[b.slot].y)
   for (const u of sorted) {
     const c = lvl.slots[u.slot]

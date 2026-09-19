@@ -53,6 +53,11 @@ export function initTelegram(): void {
 }
 
 /** Share a text with friends via Telegram's share sheet (falls back to Web Share / clipboard). */
+/** Call at the start of any drag: Telegram's swipe-to-close otherwise eats vertical drags. */
+export function lockSwipes(): void {
+  try { if (versionAtLeast('7.7')) WebApp.disableVerticalSwipes() } catch { /* ignore */ }
+}
+
 export function shareText(text: string, url = `https://t.me/${BOT_USERNAME}`): void {
   if (isTelegram) {
     WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`)

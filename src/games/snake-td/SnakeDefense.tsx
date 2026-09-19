@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiEnabled, createDuel, equippedNow, getDuel, getMe, onProfile, ownedMapLevel, submitDuel, submitScore, takePendingDuel, type DuelView, type ScoreResult } from '../../lib/api'
 import { getValue, setValue } from '../../lib/storage'
-import { haptic, shareText } from '../../lib/telegram'
+import { haptic, lockSwipes, shareText } from '../../lib/telegram'
 import type { GameProps } from '../types'
 import { chooseEvolution, createGame, EVENTS, flaskAt, maxWave, moveOrMerge, resolveEvent, startWave, tapFlask, tick, unitAt } from './engine/game'
 import { getLevel, LEVELS, unlockAfterWin } from './engine/levels'
@@ -172,6 +172,7 @@ export default function SnakeDefense({ onScore }: GameProps) {
   const onDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const s = stateRef.current, v = viewRef.current
     sfxRef.current.unlock()
+    lockSwipes()
     const { x, y } = toCanvas(e)
     if (inRect(muteRect(), x, y)) {
       v.muted = !v.muted

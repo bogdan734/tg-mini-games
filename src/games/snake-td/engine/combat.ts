@@ -5,7 +5,7 @@ import { segmentD, segmentPos } from './snake'
 import type { Flask, GameState, Vec } from './types'
 import { SWORD_RATE, swordDamage, unitRange } from './units'
 
-export const FLIGHT = 0.42
+export const FLIGHT = 0.5
 
 function hitSegment(s: GameState, i: number, dmg: number, color: string): void {
   const seg = s.snake[i]
