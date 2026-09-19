@@ -1,6 +1,6 @@
 # tg-mini-games
 
-Telegram Mini App: хаб со списком игр. Каждая игра — отдельный модуль, хаб показывает
+Telegram Mini App: хаб со списком игр. Концепция — игры из кликбейтных мобильных реклам, сделанные по-настоящему. Каждая игра — отдельный модуль, хаб показывает
 карточки, рекорды и открывает игру по тапу.
 
 Стек: Vite + React + TypeScript, `@twa-dev/sdk`. Хостинг — GitHub Pages (деплой через
@@ -36,8 +36,12 @@ npm test           # vitest: движки игр
 Спрайты Snake Defense пересобираются из CC0-частей Kenney (см. `ASSETS.md`):
 `python3 scripts/build-sprites.py <путь к monster-builder-pack/PNG/Default>`.
 
-В dev-сборке у Snake Defense есть хук `window.__std` (`state`, `step(sec)`, `api`) для
-автотестов и проверки баланса из консоли.
+В dev-сборке у игр есть хуки `window.__std` (Snake) и `window.__mtd` (Merge): `state`,
+`step(sec)`, `api` — для автотестов и проверки баланса из консоли. Внимание: бесконечный цикл в
+консольном скрипте замораживает вкладку навсегда — всегда ограничивать по `performance.now()`.
+
+Внутри Telegram проверять локально можно, открыв dev-URL с хэшем `#tgWebAppData=<подписанный
+initData>&tgWebAppVersion=8.0&tgWebAppPlatform=ios` — SDK примет его как настоящий.
 
 ## Добавить игру
 

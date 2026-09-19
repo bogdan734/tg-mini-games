@@ -1,4 +1,4 @@
-# HANDOFF — tg-mini-games (актуально на 2026-09-18, вечер)
+# HANDOFF — tg-mini-games (актуально на 2026-09-19)
 
 Читать первым в новом чате. Дополняет `README.md` (как запускать), `GAMES.md` (правила игр и роадмап),
 `ASSETS.md` (лицензии). Память Claude: `~/.claude/projects/-Users-jabko/memory/project_tg_mini_games.md`.
@@ -9,9 +9,11 @@ Telegram Mini App «хаб мини-игр» для бота **@ADS_gamesBoT**. 
 (деплой = push в `main`, ~1 мин). Бэкенд: Cloudflare Worker `backend/` →
 `https://tg-mini-games.ads-games.workers.dev` + D1 `tg-mini-games`. Бот работает через webhook на Worker.
 
-Игры: **Snake Defense** (`src/games/snake-td/`, референс Evo Defense: червь по кольцу, бойцы с мечами,
-слияние, эволюции, 4 карты, боссы, дуэли) и **Merge Defense** (`src/games/merge-td/`, референс LUDUS:
-стихии на плитках, рецепты слияния, 12 волн). Демо «Поймай точку» — заглушка, можно убрать.
+Игры: **Snake Defense** (`src/games/snake-td/`, референс Evo Defense: один тип бойца — мечник, уровень =
+число больших мечей, колбы вместо магазина, эволюция на 5 мечах, 4 карты с изгибами, боссы, дуэли) и
+**Merge Defense** (`src/games/merge-td/`, референс LUDUS: 5 стихий, любые две башни сливаются до
+уровня 4 с объединением стихий, боссы с резистами/слабостями). Правила подробно — `GAMES.md`.
+Демо «Поймай точку» — заглушка, можно убрать.
 
 Платформа: профиль по подписи `initData`, монеты 🪙 (без pay-to-win: всё за игру, Stars только
 ускоряют), магазин скинов (`shared/catalog.json`), ежедневные задания, ивенты с прогрессом, рейтинг
@@ -64,6 +66,12 @@ Telegram Mini App «хаб мини-игр» для бота **@ADS_gamesBoT**. 
    из-за `?`) и проверять, что новый бандл/ассет отдаётся.
 
 ## Известные грабли
+- **`@twa-dev/sdk` — CommonJS под `import`-условием**: `import WebApp from '@twa-dev/sdk'` даёт
+  `{default: WebApp}`. Всё, что трогает Telegram, идёт ТОЛЬКО через `WebApp` из `src/lib/telegram.ts`
+  (там резолв обеих форм). Симптом бага: «Гость» внутри Telegram, `isVersionAtLeast is not a function`.
+- Консольный скрипт с бесконечным циклом замораживает вкладку навсегда (JS однопоточный) — в
+  бот-скриптах всегда лимит по `performance.now()` и `tryMerge` должен возвращать true только при
+  реальном `'merged'`.
 - Vite 8/rolldown: нативный биндинг `@rolldown/binding-darwin-arm64` в `optionalDependencies`,
   иначе `npm run build` падает (npm-баг с optional deps).
 - `@twa-dev/sdk`: `isVersionAtLeast` в рантайме нет — своя `versionAtLeast` в `src/lib/telegram.ts`.
@@ -73,7 +81,11 @@ Telegram Mini App «хаб мини-игр» для бота **@ADS_gamesBoT**. 
   `/file/<id>?source=game_download` с cookie; ключ живёт ~60 с, делать одной командой.
 - Telegram: fullscreen (API 8.0) включён; safe-area через CSS-переменные `--tg-*`.
 
-## Что дальше (кандидаты, спросить/выбрать по фидбеку)
+## Что дальше
+- Пользователь обещал прислать второй референс (для Merge Defense) — ждать и сравнивать.
+- План монетизации/роста расписан в `docs/GROWTH.md`; первый шаг — карточки шаринга через
+  `savePreparedInlineMessage` + `WebApp.shareMessage`, затем Adsgram rewarded и Affiliate Program.
+- Кандидаты по полировке (спросить/выбрать по фидбеку)
 - Полировка «дорого»: разлёт камней при гибели сегмента, вспышка+фанфары на эволюции, экран старта
   игры с баннером, музыка/звуки из свободных паков, анимация покупки/слияния (появление из дыма).
 - Проверить в Telegram, что профиль грузится (карточка теперь показывает ошибку и «↻» — если у
